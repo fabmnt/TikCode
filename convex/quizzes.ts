@@ -26,6 +26,7 @@ export const listFeed = query({
   handler: async (ctx, { clientId, paginationOpts }) => {
     const result = await ctx.db
       .query("quizzes")
+      .withIndex("by_status", (q) => q.eq("status", "published"))
       .order("asc")
       .paginate(paginationOpts);
 

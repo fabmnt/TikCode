@@ -8,6 +8,11 @@
  * @module
  */
 
+import type * as auth from "../auth.js";
+import type * as authz from "../authz.js";
+import type * as drafts from "../drafts.js";
+import type * as generate from "../generate.js";
+import type * as http from "../http.js";
 import type * as quizzes from "../quizzes.js";
 import type * as seed from "../seed.js";
 import type * as seedData from "../seedData.js";
@@ -19,6 +24,11 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  auth: typeof auth;
+  authz: typeof authz;
+  drafts: typeof drafts;
+  generate: typeof generate;
+  http: typeof http;
   quizzes: typeof quizzes;
   seed: typeof seed;
   seedData: typeof seedData;
