@@ -9,6 +9,7 @@
     "dev": "convex dev --start 'astro dev' --run seed:seedQuizzes",
     "dev:frontend": "astro dev",
     "build": "astro build",
+    "build:vercel": "convex deploy --cmd 'astro build' --preview-run 'seed:seedQuizzes' && convex run seed:seedQuizzes",
     "preview": "astro preview",
     "astro": "astro",
     "lint": "eslint .",
