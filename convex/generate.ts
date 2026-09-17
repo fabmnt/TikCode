@@ -9,7 +9,7 @@ import { internal } from "./_generated/api";
 import { action } from "./_generated/server";
 import { difficulty, language, topic } from "./schema";
 
-const DEFAULT_MODEL = "anthropic/claude-sonnet-5";
+const DEFAULT_MODEL = "stealth/union-alpha";
 const MAX_QUIZZES_PER_RUN = 5;
 const OPTION_IDS = ["a", "b", "c", "d"] as const;
 
