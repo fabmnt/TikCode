@@ -12,6 +12,8 @@ import { difficulty, language, topic } from "./schema";
 const DEFAULT_MODEL = "stealth/union-alpha";
 const MAX_QUIZZES_PER_RUN = 5;
 const OPTION_IDS = ["a", "b", "c", "d"] as const;
+const MIN_CODE_LINES = 5;
+const MAX_CODE_LINES = 15;
 
 type Language = Infer<typeof language>;
 type Topic = Infer<typeof topic>;
@@ -33,9 +35,10 @@ const TOPIC_BRIEF: Record<Topic, string> = {
 const SYSTEM_PROMPT = `You write multiple-choice quizzes that train developers to spot problems in code.
 
 Every quiz must follow these rules:
-- The code snippet is between 5 and 15 lines and looks like code from a real project.
+- The code snippet is between ${MIN_CODE_LINES} and ${MAX_CODE_LINES} lines and looks like code from a real project.
+- The snippet is raw code. Never wrap it in markdown fences.
 - The snippet demonstrates exactly one problem, and that problem matches the requested topic.
-- The question has one defensible answer. Never ask for opinions or preferences.
+- The question has one defensible answer and ends with a question mark. Never ask for opinions or preferences.
 - Provide exactly 4 options, with ids "a", "b", "c" and "d". Exactly one option is correct.
 - The wrong options are plausible, but clearly wrong once the reader parses the code.
 - The explanation says why the correct option is right, in one or two sentences.
@@ -83,21 +86,32 @@ function slugify(value: string) {
     .slice(0, 60);
 }
 
+function countCodeLines(code: string) {
+  return code.split("\n").filter((line) => line.trim() !== "").length;
+}
+
 function isUsable(quiz: GeneratedQuiz, slug: string) {
   if (slug.length === 0) {
     return false;
   }
 
   const optionIds = new Set(quiz.options.map((option) => option.id));
-  const hasUniqueOptions = optionIds.size === quiz.options.length;
-  const answersKnownOption = optionIds.has(quiz.correctOptionId);
-  const hasContent =
-    quiz.prompt.trim().length > 0 &&
-    quiz.code.trim().length > 0 &&
-    quiz.explanation.trim().length > 0 &&
-    quiz.options.every((option) => option.label.trim().length > 0);
+  const code = quiz.code.trim();
+  const codeLines = countCodeLines(code);
 
-  return hasUniqueOptions && answersKnownOption && hasContent;
+  const optionsAreValid =
+    optionIds.size === quiz.options.length &&
+    optionIds.has(quiz.correctOptionId) &&
+    quiz.options.every((option) => option.label.trim() !== "");
+
+  const contentIsValid =
+    quiz.prompt.trim().endsWith("?") &&
+    !code.includes("```") &&
+    codeLines >= MIN_CODE_LINES &&
+    codeLines <= MAX_CODE_LINES &&
+    quiz.explanation.trim() !== "";
+
+  return optionsAreValid && contentIsValid;
 }
 
 function buildPrompt(

@@ -24,11 +24,18 @@ import { cn } from "@/lib/utils";
 type DraftCardProps = {
   draft: Doc<"quizzes">;
   pending: boolean;
+  disabled: boolean;
   onPublish: () => void;
   onDiscard: () => void;
 };
 
-function DraftCard({ draft, pending, onPublish, onDiscard }: DraftCardProps) {
+function DraftCard({
+  draft,
+  pending,
+  disabled,
+  onPublish,
+  onDiscard,
+}: DraftCardProps) {
   return (
     <article className="border-border flex flex-col gap-3 rounded-xl border p-4">
       <header className="flex flex-wrap items-center gap-2">
@@ -71,11 +78,11 @@ function DraftCard({ draft, pending, onPublish, onDiscard }: DraftCardProps) {
       <p className="text-muted-foreground text-sm">{draft.explanation}</p>
 
       <div className="flex items-center gap-2">
-        <Button onClick={onPublish} disabled={pending}>
+        <Button onClick={onPublish} disabled={disabled}>
           {pending && <Spinner />}
           Publish
         </Button>
-        <Button variant="destructive" onClick={onDiscard} disabled={pending}>
+        <Button variant="destructive" onClick={onDiscard} disabled={disabled}>
           Discard
         </Button>
       </div>
@@ -135,6 +142,7 @@ export function DraftReview() {
             key={draft._id}
             draft={draft}
             pending={pendingId === draft._id}
+            disabled={pendingId !== null}
             onPublish={() =>
               run(draft._id, () => publishDraft({ quizId: draft._id }))
             }
