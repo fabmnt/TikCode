@@ -1,17 +1,21 @@
 ---
-
+import Layout from "../layouts/Layout.astro";
+import QuizFeed from "../components/quiz/QuizFeed.tsx";
+import { Skeleton } from "../components/ui/skeleton";
 ---
 
-<html lang="en">
-	<head>
-		<meta charset="utf-8" />
-		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-		<link rel="icon" href="/favicon.ico" />
-		<meta name="viewport" content="width=device-width" />
-		<meta name="generator" content={Astro.generator} />
-		<title>Astro</title>
-	</head>
-	<body>
-		<h1>Astro</h1>
-	</body>
-</html>
+<Layout title="TikCode">
+  <main class="mx-auto h-dvh w-full max-w-md overflow-hidden border-x border-border">
+    <QuizFeed client:only="react">
+      <div slot="fallback" class="flex h-dvh flex-col gap-4 px-4 py-5">
+        <Skeleton className="h-5 w-24" />
+        <Skeleton className="h-7 w-5/6" />
+        <Skeleton className="min-h-0 flex-1" />
+        <Skeleton className="h-12 w-full" />
+        <Skeleton className="h-12 w-full" />
+        <Skeleton className="h-12 w-full" />
+        <Skeleton className="h-12 w-full" />
+      </div>
+    </QuizFeed>
+  </main>
+</Layout>
