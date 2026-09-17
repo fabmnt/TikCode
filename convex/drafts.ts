@@ -12,15 +12,16 @@ import { quizContent } from "./schema";
 const DRAFT_LIMIT = 50;
 const SLUG_HISTORY_LIMIT = 60;
 
-async function slugIsTaken(ctx: MutationCtx, slug: string) {
+async function publishedSlugExists(ctx: MutationCtx, slug: string) {
   const published = await ctx.db
     .query("quizzes")
     .withIndex("by_slug", (q) => q.eq("slug", slug))
     .unique();
-  if (published) {
-    return true;
-  }
 
+  return published !== null;
+}
+
+async function draftSlugExists(ctx: MutationCtx, slug: string) {
   const draft = await ctx.db
     .query("quizDrafts")
     .withIndex("by_slug", (q) => q.eq("slug", slug))
@@ -48,9 +49,9 @@ export const publishDraft = mutation({
       throw new ConvexError("Draft not found");
     }
 
-    if (await slugIsTaken(ctx, draft.slug)) {
+    if (await publishedSlugExists(ctx, draft.slug)) {
       throw new ConvexError(
-        `A quiz with the slug "${draft.slug}" already exists. Discard this draft instead.`,
+        `A published quiz already uses the slug "${draft.slug}". Discard this draft instead.`,
       );
     }
 
@@ -109,7 +110,11 @@ export const insertDrafts = internalMutation({
     let skipped = 0;
 
     for (const draft of drafts) {
-      if (await slugIsTaken(ctx, draft.slug)) {
+      const collides =
+        (await publishedSlugExists(ctx, draft.slug)) ||
+        (await draftSlugExists(ctx, draft.slug));
+
+      if (collides) {
         skipped += 1;
         continue;
       }
