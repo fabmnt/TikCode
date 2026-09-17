@@ -176,7 +176,7 @@ export const generateDrafts = action({
       prompt: buildPrompt(request, count, existingSlugs),
     });
 
-    const quizzes = output.flatMap((quiz) => {
+    const drafts = output.flatMap((quiz) => {
       const slug = slugify(quiz.slug);
       if (!isUsable(quiz, slug)) {
         return [];
@@ -194,9 +194,9 @@ export const generateDrafts = action({
     });
 
     const result = await ctx.runMutation(internal.drafts.insertDrafts, {
-      quizzes,
+      drafts,
     });
 
-    return { ...result, rejected: output.length - quizzes.length };
+    return { ...result, rejected: output.length - drafts.length };
   },
 });

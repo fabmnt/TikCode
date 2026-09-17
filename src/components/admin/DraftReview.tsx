@@ -22,7 +22,7 @@ import {
 import { cn } from "@/lib/utils";
 
 type DraftCardProps = {
-  draft: Doc<"quizzes">;
+  draft: Doc<"quizDrafts">;
   pending: boolean;
   disabled: boolean;
   onPublish: () => void;
@@ -94,11 +94,11 @@ export function DraftReview() {
   const drafts = useQuery(api.drafts.listDrafts);
   const publishDraft = useMutation(api.drafts.publishDraft);
   const discardDraft = useMutation(api.drafts.discardDraft);
-  const [pendingId, setPendingId] = useState<Id<"quizzes"> | null>(null);
+  const [pendingId, setPendingId] = useState<Id<"quizDrafts"> | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  function run(quizId: Id<"quizzes">, action: () => Promise<unknown>) {
-    setPendingId(quizId);
+  function run(draftId: Id<"quizDrafts">, action: () => Promise<unknown>) {
+    setPendingId(draftId);
     setError(null);
 
     void action()
@@ -144,10 +144,10 @@ export function DraftReview() {
             pending={pendingId === draft._id}
             disabled={pendingId !== null}
             onPublish={() =>
-              run(draft._id, () => publishDraft({ quizId: draft._id }))
+              run(draft._id, () => publishDraft({ draftId: draft._id }))
             }
             onDiscard={() =>
-              run(draft._id, () => discardDraft({ quizId: draft._id }))
+              run(draft._id, () => discardDraft({ draftId: draft._id }))
             }
           />
         ))

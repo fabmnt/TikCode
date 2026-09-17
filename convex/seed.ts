@@ -22,14 +22,11 @@ export const seedQuizzes = mutation({
       let quizId;
 
       if (current) {
-        await ctx.db.replace(current._id, { ...quiz, status: "published" });
+        await ctx.db.replace(current._id, quiz);
         quizId = current._id;
         updated += 1;
       } else {
-        quizId = await ctx.db.insert("quizzes", {
-          ...quiz,
-          status: "published",
-        });
+        quizId = await ctx.db.insert("quizzes", quiz);
         inserted += 1;
       }
 

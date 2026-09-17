@@ -18,8 +18,6 @@ export const difficulty = v.union(
 
 export const role = v.union(v.literal("admin"), v.literal("user"));
 
-export const quizStatus = v.union(v.literal("draft"), v.literal("published"));
-
 export const quizOption = v.object({
   id: v.string(),
   label: v.string(),
@@ -51,12 +49,9 @@ export default defineSchema({
     role: v.optional(role),
   }).index("email", ["email"]),
 
-  quizzes: defineTable({
-    ...quizContent,
-    status: quizStatus,
-  })
-    .index("by_slug", ["slug"])
-    .index("by_status", ["status"]),
+  quizzes: defineTable(quizContent).index("by_slug", ["slug"]),
+
+  quizDrafts: defineTable(quizContent).index("by_slug", ["slug"]),
 
   quizStats: defineTable({
     quizId: v.id("quizzes"),

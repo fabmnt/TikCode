@@ -4,6 +4,7 @@ import {
   internalQuery,
   mutation,
   query,
+  type MutationCtx,
 } from "./_generated/server";
 import { requireAdmin } from "./authz";
 import { quizContent } from "./schema";
@@ -11,60 +12,74 @@ import { quizContent } from "./schema";
 const DRAFT_LIMIT = 50;
 const SLUG_HISTORY_LIMIT = 60;
 
+async function slugIsTaken(ctx: MutationCtx, slug: string) {
+  const published = await ctx.db
+    .query("quizzes")
+    .withIndex("by_slug", (q) => q.eq("slug", slug))
+    .unique();
+  if (published) {
+    return true;
+  }
+
+  const draft = await ctx.db
+    .query("quizDrafts")
+    .withIndex("by_slug", (q) => q.eq("slug", slug))
+    .unique();
+
+  return draft !== null;
+}
+
 export const listDrafts = query({
   args: {},
   handler: async (ctx) => {
     await requireAdmin(ctx);
 
-    return await ctx.db
-      .query("quizzes")
-      .withIndex("by_status", (q) => q.eq("status", "draft"))
-      .order("desc")
-      .take(DRAFT_LIMIT);
+    return await ctx.db.query("quizDrafts").order("desc").take(DRAFT_LIMIT);
   },
 });
 
 export const publishDraft = mutation({
-  args: { quizId: v.id("quizzes") },
-  handler: async (ctx, { quizId }) => {
+  args: { draftId: v.id("quizDrafts") },
+  handler: async (ctx, { draftId }) => {
     await requireAdmin(ctx);
 
-    const quiz = await ctx.db.get(quizId);
-    if (!quiz) {
-      throw new ConvexError("Quiz not found");
+    const draft = await ctx.db.get(draftId);
+    if (!draft) {
+      throw new ConvexError("Draft not found");
     }
 
-    if (quiz.status === "published") {
-      throw new ConvexError("Quiz is already published");
+    if (await slugIsTaken(ctx, draft.slug)) {
+      throw new ConvexError(
+        `A quiz with the slug "${draft.slug}" already exists. Discard this draft instead.`,
+      );
     }
 
-    await ctx.db.patch(quizId, { status: "published" });
+    await ctx.db.insert("quizzes", {
+      slug: draft.slug,
+      prompt: draft.prompt,
+      code: draft.code,
+      language: draft.language,
+      topic: draft.topic,
+      difficulty: draft.difficulty,
+      options: draft.options,
+      correctOptionId: draft.correctOptionId,
+      explanation: draft.explanation,
+    });
+    await ctx.db.delete(draftId);
   },
 });
 
 export const discardDraft = mutation({
-  args: { quizId: v.id("quizzes") },
-  handler: async (ctx, { quizId }) => {
+  args: { draftId: v.id("quizDrafts") },
+  handler: async (ctx, { draftId }) => {
     await requireAdmin(ctx);
 
-    const quiz = await ctx.db.get(quizId);
-    if (!quiz) {
-      throw new ConvexError("Quiz not found");
+    const draft = await ctx.db.get(draftId);
+    if (!draft) {
+      throw new ConvexError("Draft not found");
     }
 
-    if (quiz.status !== "draft") {
-      throw new ConvexError("Only drafts can be discarded");
-    }
-
-    const stats = await ctx.db
-      .query("quizStats")
-      .withIndex("by_quiz", (q) => q.eq("quizId", quizId))
-      .unique();
-    if (stats) {
-      await ctx.db.delete(stats._id);
-    }
-
-    await ctx.db.delete(quizId);
+    await ctx.db.delete(draftId);
   },
 });
 
@@ -75,29 +90,31 @@ export const existingSlugs = internalQuery({
       .query("quizzes")
       .order("desc")
       .take(SLUG_HISTORY_LIMIT);
+    const drafts = await ctx.db
+      .query("quizDrafts")
+      .order("desc")
+      .take(SLUG_HISTORY_LIMIT);
 
-    return quizzes.map((quiz) => quiz.slug);
+    return [
+      ...quizzes.map((quiz) => quiz.slug),
+      ...drafts.map((draft) => draft.slug),
+    ];
   },
 });
 
 export const insertDrafts = internalMutation({
-  args: { quizzes: v.array(v.object(quizContent)) },
-  handler: async (ctx, { quizzes }) => {
+  args: { drafts: v.array(v.object(quizContent)) },
+  handler: async (ctx, { drafts }) => {
     let inserted = 0;
     let skipped = 0;
 
-    for (const quiz of quizzes) {
-      const existing = await ctx.db
-        .query("quizzes")
-        .withIndex("by_slug", (q) => q.eq("slug", quiz.slug))
-        .unique();
-
-      if (existing) {
+    for (const draft of drafts) {
+      if (await slugIsTaken(ctx, draft.slug)) {
         skipped += 1;
         continue;
       }
 
-      await ctx.db.insert("quizzes", { ...quiz, status: "draft" });
+      await ctx.db.insert("quizDrafts", draft);
       inserted += 1;
     }
 
