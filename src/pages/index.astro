@@ -4,8 +4,8 @@ import QuizFeed from "../components/quiz/QuizFeed.tsx";
 import { Skeleton } from "../components/ui/skeleton";
 ---
 
-<Layout title="TikCode">
-  <main class="mx-auto h-dvh w-full max-w-md overflow-hidden border-x border-border">
+<Layout title="Quizz Feed">
+  <main class="mx-auto h-dvh w-full max-w-md overflow-hidden md:border-x md:border-border">
     <QuizFeed client:only="react">
       <div slot="fallback" class="flex h-dvh flex-col gap-4 px-4 py-5">
         <Skeleton className="h-5 w-24" />

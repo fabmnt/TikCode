@@ -39,7 +39,7 @@ export function QuizCard({ quiz, pendingOptionId, onAnswer }: QuizCardProps) {
       <div className="relative min-h-0 flex-1">
         <CodeBlock code={quiz.code} language={quiz.language} />
         {quiz.answered && (
-          <p className="border-border bg-card/95 text-muted-foreground absolute inset-x-px bottom-px rounded-b-lg border-t px-3 py-2 text-sm">
+          <p className="border-border bg-card/95 text-muted-foreground absolute inset-x-0 bottom-0 rounded-b-lg px-3 py-2 text-sm md:inset-x-px md:bottom-px md:border-t">
             {quiz.explanation}
           </p>
         )}
