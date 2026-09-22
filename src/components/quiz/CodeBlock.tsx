@@ -13,7 +13,7 @@ export const CodeBlock = memo(function CodeBlock({
   const html = highlight(code.trim(), { lang: language });
 
   return (
-    <pre className="sh-code border-border bg-card h-full overflow-auto rounded-lg border p-3 font-mono text-[0.8rem] leading-snug break-words whitespace-pre-wrap">
+    <pre className="sh-code border-border bg-card h-full overflow-auto rounded-lg border-0 p-3 font-mono text-[0.8rem] leading-snug break-words whitespace-pre-wrap md:border">
       <code dangerouslySetInnerHTML={{ __html: html }} />
     </pre>
   );
