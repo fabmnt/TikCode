@@ -6,7 +6,7 @@
     "node": ">=22.12.0"
   },
   "scripts": {
-    "dev": "convex dev --start 'astro dev' --run seed:seedQuizzes",
+    "dev": "convex dev --start 'astro dev'",
     "dev:frontend": "astro dev",
     "build": "astro build",
     "build:vercel": "node scripts/vercel-build.mjs",
