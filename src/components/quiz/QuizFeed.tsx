@@ -4,7 +4,9 @@ import { CircleHelpIcon } from "lucide-react";
 import { api } from "../../../convex/_generated/api";
 import { withConvexProvider } from "@/lib/convex";
 import { getOrCreateClientId } from "@/lib/client-id";
+import { useLinkAnonymousVotes } from "@/lib/use-link-anonymous-votes";
 import { FEED_PAGE_SIZE, isNearby, withStats } from "@/lib/feed";
+import { FeedAccountButton } from "@/components/auth/FeedAccountButton";
 import { QuizCard } from "@/components/quiz/QuizCard";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -15,9 +17,18 @@ import {
   EmptyTitle,
 } from "@/components/ui/empty";
 
+function FeedHeader() {
+  return (
+    <header className="flex h-12 shrink-0 items-center justify-end px-3">
+      <FeedAccountButton />
+    </header>
+  );
+}
+
 function QuizFeedView() {
   const [clientId] = useState(getOrCreateClientId);
   const [activeIndex, setActiveIndex] = useState(0);
+  useLinkAnonymousVotes(clientId);
   const [pendingByQuiz, setPendingByQuiz] = useState<Record<string, string>>(
     {},
   );
@@ -46,88 +57,100 @@ function QuizFeedView() {
 
   if (isLoading && results.length === 0) {
     return (
-      <div className="flex h-dvh flex-col gap-4 px-4 py-5">
-        <Skeleton className="h-5 w-24" />
-        <Skeleton className="h-7 w-5/6" />
-        <Skeleton className="min-h-0 flex-1" />
-        <Skeleton className="h-12 w-full" />
-        <Skeleton className="h-12 w-full" />
-        <Skeleton className="h-12 w-full" />
-        <Skeleton className="h-12 w-full" />
+      <div className="flex h-dvh flex-col">
+        <FeedHeader />
+        <div className="flex min-h-0 flex-1 flex-col gap-4 px-4 py-5">
+          <Skeleton className="h-5 w-24" />
+          <Skeleton className="h-7 w-5/6" />
+          <Skeleton className="min-h-0 flex-1" />
+          <Skeleton className="h-12 w-full" />
+          <Skeleton className="h-12 w-full" />
+          <Skeleton className="h-12 w-full" />
+          <Skeleton className="h-12 w-full" />
+        </div>
       </div>
     );
   }
 
   if (results.length === 0) {
     return (
-      <div className="flex h-dvh items-center justify-center px-4">
-        <Empty>
-          <EmptyHeader>
-            <EmptyMedia variant="icon">
-              <CircleHelpIcon />
-            </EmptyMedia>
-            <EmptyTitle>No quizzes yet</EmptyTitle>
-            <EmptyDescription>
-              Seed the database, then refresh this feed.
-            </EmptyDescription>
-          </EmptyHeader>
-        </Empty>
+      <div className="flex h-dvh flex-col">
+        <FeedHeader />
+        <div className="flex min-h-0 flex-1 items-center justify-center px-4">
+          <Empty>
+            <EmptyHeader>
+              <EmptyMedia variant="icon">
+                <CircleHelpIcon />
+              </EmptyMedia>
+              <EmptyTitle>No quizzes yet</EmptyTitle>
+              <EmptyDescription>
+                Seed the database, then refresh this feed.
+              </EmptyDescription>
+            </EmptyHeader>
+          </Empty>
+        </div>
       </div>
     );
   }
 
   return (
-    <div
-      className="h-dvh snap-y snap-mandatory [scrollbar-width:none] overflow-y-auto overscroll-y-contain scroll-smooth [&::-webkit-scrollbar]:hidden"
-      onScroll={(event) => {
-        const el = event.currentTarget;
-        const index = Math.round(el.scrollTop / el.clientHeight);
-        setActiveIndex((current) => (current === index ? current : index));
+    <div className="flex h-dvh flex-col">
+      <FeedHeader />
+      <div
+        className="min-h-0 flex-1 snap-y snap-mandatory [scrollbar-width:none] overflow-y-auto overscroll-y-contain scroll-smooth [&::-webkit-scrollbar]:hidden"
+        onScroll={(event) => {
+          const el = event.currentTarget;
+          const index = Math.round(el.scrollTop / el.clientHeight);
+          setActiveIndex((current) => (current === index ? current : index));
 
-        if (status === "CanLoadMore" && index >= results.length - 4) {
-          loadMore(FEED_PAGE_SIZE);
-        }
-      }}
-    >
-      {results.map((quiz, index) => {
-        let stats = undefined;
-        if (index === activeIndex - 1) stats = prevStats;
-        if (index === activeIndex) stats = currentStats;
-        if (index === activeIndex + 1) stats = nextStats;
+          if (status === "CanLoadMore" && index >= results.length - 4) {
+            loadMore(FEED_PAGE_SIZE);
+          }
+        }}
+      >
+        {results.map((quiz, index) => {
+          let stats = undefined;
+          if (index === activeIndex - 1) stats = prevStats;
+          if (index === activeIndex) stats = currentStats;
+          if (index === activeIndex + 1) stats = nextStats;
 
-        return (
-          <div key={quiz._id} className="h-dvh snap-start snap-always">
-            {isNearby(index, activeIndex) ? (
-              <QuizCard
-                quiz={withStats(quiz, stats)}
-                pendingOptionId={pendingByQuiz[quiz._id] ?? null}
-                onAnswer={(optionId) => {
-                  if (quiz.answered || pendingByQuiz[quiz._id]) {
-                    return;
-                  }
+          return (
+            <div
+              key={quiz._id}
+              className="h-[calc(100dvh-3rem)] snap-start snap-always"
+            >
+              {isNearby(index, activeIndex) ? (
+                <QuizCard
+                  quiz={withStats(quiz, stats)}
+                  pendingOptionId={pendingByQuiz[quiz._id] ?? null}
+                  onAnswer={(optionId) => {
+                    if (quiz.answered || pendingByQuiz[quiz._id]) {
+                      return;
+                    }
 
-                  setPendingByQuiz((current) => ({
-                    ...current,
-                    [quiz._id]: optionId,
-                  }));
+                    setPendingByQuiz((current) => ({
+                      ...current,
+                      [quiz._id]: optionId,
+                    }));
 
-                  void vote({
-                    quizId: quiz._id,
-                    clientId,
-                    optionId,
-                  }).finally(() => {
-                    setPendingByQuiz((current) => {
-                      const next = { ...current };
-                      delete next[quiz._id];
-                      return next;
+                    void vote({
+                      quizId: quiz._id,
+                      clientId,
+                      optionId,
+                    }).finally(() => {
+                      setPendingByQuiz((current) => {
+                        const next = { ...current };
+                        delete next[quiz._id];
+                        return next;
+                      });
                     });
-                  });
-                }}
-              />
-            ) : null}
-          </div>
-        );
-      })}
+                  }}
+                />
+              ) : null}
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }

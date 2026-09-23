@@ -1,6 +1,5 @@
 "use node";
 
-import { getAuthUserId } from "@convex-dev/auth/server";
 import { createOpenRouter } from "@openrouter/ai-sdk-provider";
 import { generateText, Output } from "ai";
 import { ConvexError, v, type Infer } from "convex/values";
@@ -140,13 +139,20 @@ export const generateDrafts = action({
     language,
     count: v.number(),
   },
+  returns: v.object({
+    inserted: v.number(),
+    skipped: v.number(),
+    rejected: v.number(),
+  }),
   handler: async (ctx, request): Promise<GenerationResult> => {
-    const userId = await getAuthUserId(ctx);
-    if (userId === null) {
+    const identity = await ctx.auth.getUserIdentity();
+    if (identity === null) {
       throw new ConvexError("Sign in to continue");
     }
 
-    const user = await ctx.runQuery(internal.authz.userById, { userId });
+    const user = await ctx.runQuery(internal.authz.userByAuthId, {
+      authId: identity.subject,
+    });
     if (user?.role !== "admin") {
       throw new ConvexError("Admin access required");
     }

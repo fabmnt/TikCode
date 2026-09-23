@@ -1,4 +1,3 @@
-import { authTables } from "@convex-dev/auth/server";
 import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
 
@@ -36,18 +35,13 @@ export const quizContent = {
 };
 
 export default defineSchema({
-  ...authTables,
-
   users: defineTable({
+    authId: v.string(),
+    email: v.string(),
     name: v.optional(v.string()),
     image: v.optional(v.string()),
-    email: v.optional(v.string()),
-    emailVerificationTime: v.optional(v.number()),
-    phone: v.optional(v.string()),
-    phoneVerificationTime: v.optional(v.number()),
-    isAnonymous: v.optional(v.boolean()),
-    role: v.optional(role),
-  }).index("email", ["email"]),
+    role,
+  }).index("by_authId", ["authId"]),
 
   quizzes: defineTable(quizContent).index("by_slug", ["slug"]),
 
@@ -62,7 +56,10 @@ export default defineSchema({
     quizId: v.id("quizzes"),
     clientId: v.string(),
     optionId: v.string(),
+    userId: v.optional(v.string()),
   })
     .index("by_quiz_and_client", ["quizId", "clientId"])
-    .index("by_client", ["clientId"]),
+    .index("by_client", ["clientId"])
+    .index("by_quiz_and_user", ["quizId", "userId"])
+    .index("by_user", ["userId"]),
 });
