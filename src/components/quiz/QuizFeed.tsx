@@ -4,7 +4,6 @@ import { CircleHelpIcon } from "lucide-react";
 import { api } from "../../../convex/_generated/api";
 import { withConvexProvider } from "@/lib/convex";
 import { getOrCreateClientId } from "@/lib/client-id";
-import { useLinkAnonymousVotes } from "@/lib/use-link-anonymous-votes";
 import { FEED_PAGE_SIZE, isNearby, withStats } from "@/lib/feed";
 import { FeedAccountButton } from "@/components/auth/FeedAccountButton";
 import { QuizCard } from "@/components/quiz/QuizCard";
@@ -28,7 +27,6 @@ function FeedHeader() {
 function QuizFeedView() {
   const [clientId] = useState(getOrCreateClientId);
   const [activeIndex, setActiveIndex] = useState(0);
-  useLinkAnonymousVotes(clientId);
   const [pendingByQuiz, setPendingByQuiz] = useState<Record<string, string>>(
     {},
   );

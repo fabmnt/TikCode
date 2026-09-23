@@ -31,6 +31,12 @@ export function GoogleSignInButton({
               callbackURL: window.location.href,
               errorCallbackURL: window.location.href,
             })
+            .then((result) => {
+              if (result.error) {
+                setPending(false);
+                setError("Could not start Google sign-in.");
+              }
+            })
             .catch(() => {
               setPending(false);
               setError("Could not start Google sign-in.");

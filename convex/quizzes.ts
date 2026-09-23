@@ -14,6 +14,7 @@ import { difficulty, language, quizOption, topic } from "./schema";
 
 const LINK_PAGE_SIZE = 100;
 const LINK_SCAN_LIMIT = 500;
+const ACCOUNT_CLIENT_PREFIX = "user:";
 
 function emptyCounts(optionIds: string[]) {
   return Object.fromEntries(optionIds.map((id) => [id, 0]));
@@ -35,6 +36,19 @@ async function viewerUserId(ctx: QueryCtx | MutationCtx) {
   return identity?.subject ?? null;
 }
 
+async function voteByClient(
+  ctx: QueryCtx | MutationCtx,
+  quizId: Id<"quizzes">,
+  clientId: string,
+) {
+  return await ctx.db
+    .query("votes")
+    .withIndex("by_quiz_and_client", (q) =>
+      q.eq("quizId", quizId).eq("clientId", clientId),
+    )
+    .unique();
+}
+
 async function voteForViewer(
   ctx: QueryCtx | MutationCtx,
   quizId: Id<"quizzes">,
@@ -53,12 +67,20 @@ async function voteForViewer(
     }
   }
 
-  return await ctx.db
-    .query("votes")
-    .withIndex("by_quiz_and_client", (q) =>
-      q.eq("quizId", quizId).eq("clientId", clientId),
-    )
-    .unique();
+  const byClient = await voteByClient(ctx, quizId, clientId);
+  if (!byClient) {
+    return null;
+  }
+
+  const ownedByAnotherAccount =
+    userId !== null &&
+    byClient.userId !== undefined &&
+    byClient.userId !== userId;
+  if (ownedByAnotherAccount) {
+    return null;
+  }
+
+  return byClient;
 }
 
 async function changeOptionCount(
@@ -209,9 +231,18 @@ export const vote = mutation({
       return { alreadyVoted: true };
     }
 
+    const browserVote = userId
+      ? await voteByClient(ctx, quizId, clientId)
+      : null;
+    const browserVoteOwnedByAnotherAccount =
+      browserVote?.userId !== undefined && browserVote.userId !== userId;
+    const storedClientId = browserVoteOwnedByAnotherAccount
+      ? `${ACCOUNT_CLIENT_PREFIX}${userId}`
+      : clientId;
+
     await ctx.db.insert("votes", {
       quizId,
-      clientId,
+      clientId: storedClientId,
       optionId,
       ...(userId ? { userId } : {}),
     });
