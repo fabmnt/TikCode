@@ -62,4 +62,10 @@ export default defineSchema({
     .index("by_client", ["clientId"])
     .index("by_quiz_and_user", ["quizId", "userId"])
     .index("by_user", ["userId"]),
+
+  voteLinkCursors: defineTable({
+    userId: v.string(),
+    clientId: v.string(),
+    cursor: v.string(),
+  }).index("by_user_and_client", ["userId", "clientId"]),
 });

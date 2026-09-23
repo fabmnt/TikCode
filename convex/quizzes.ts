@@ -269,6 +269,7 @@ export const linkAnonymousVotes = mutation({
   returns: v.object({
     linked: v.number(),
     dropped: v.number(),
+    hasMore: v.boolean(),
   }),
   handler: async (ctx, { clientId }) => {
     const userId = await viewerUserId(ctx);
@@ -276,12 +277,20 @@ export const linkAnonymousVotes = mutation({
       throw new ConvexError("Sign in to continue");
     }
 
+    const progress = await ctx.db
+      .query("voteLinkCursors")
+      .withIndex("by_user_and_client", (q) =>
+        q.eq("userId", userId).eq("clientId", clientId),
+      )
+      .unique();
+
     const browserVotes: Doc<"votes">[] = [];
     let scanned = 0;
-    let cursor: string | null = null;
+    let cursor: string | null = progress?.cursor ?? null;
     let isDone = false;
 
-    // Read first, then write. A sign-in links at most LINK_SCAN_LIMIT votes.
+    // Read first, then write. Each call scans at most LINK_SCAN_LIMIT votes
+    // and resumes from the saved cursor so already-linked rows are not reread.
     while (!isDone && scanned < LINK_SCAN_LIMIT) {
       const page = await ctx.db
         .query("votes")
@@ -328,6 +337,14 @@ export const linkAnonymousVotes = mutation({
       linked += 1;
     }
 
-    return { linked, dropped };
+    if (cursor !== null) {
+      if (progress) {
+        await ctx.db.patch(progress._id, { cursor });
+      } else {
+        await ctx.db.insert("voteLinkCursors", { userId, clientId, cursor });
+      }
+    }
+
+    return { linked, dropped, hasMore: !isDone };
   },
 });

@@ -14,6 +14,20 @@ export function useLinkAnonymousVotes(clientId: string) {
       return;
     }
 
-    void linkAnonymousVotes({ clientId }).catch(() => undefined);
+    let cancelled = false;
+
+    const linkRemaining = async () => {
+      let hasMore = true;
+      while (hasMore && !cancelled) {
+        const result = await linkAnonymousVotes({ clientId });
+        hasMore = result.hasMore;
+      }
+    };
+
+    void linkRemaining().catch(() => undefined);
+
+    return () => {
+      cancelled = true;
+    };
   }, [clientId, isAuthenticated, linkAnonymousVotes]);
 }
