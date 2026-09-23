@@ -13,6 +13,11 @@ export default defineConfig({
         access: "public",
         context: "client",
       }),
+      CONVEX_SITE_URL: envField.string({
+        access: "public",
+        context: "client",
+        optional: true,
+      }),
     },
   },
   vite: {

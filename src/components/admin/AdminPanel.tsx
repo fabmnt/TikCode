@@ -4,14 +4,13 @@ import {
   Unauthenticated,
   useQuery,
 } from "convex/react";
-import { useAuthActions } from "@convex-dev/auth/react";
 import { ShieldAlertIcon } from "lucide-react";
 import { api } from "../../../convex/_generated/api";
 import { withConvexProvider } from "@/lib/convex";
+import { SignOutButton } from "@/components/auth/GoogleAuthButton";
 import { AdminSignIn } from "@/components/admin/AdminSignIn";
 import { DraftReview } from "@/components/admin/DraftReview";
 import { GenerationForm } from "@/components/admin/GenerationForm";
-import { Button } from "@/components/ui/button";
 import {
   Empty,
   EmptyDescription,
@@ -26,16 +25,6 @@ function Loading() {
     <div className="flex justify-center py-16">
       <Spinner />
     </div>
-  );
-}
-
-function SignOutButton() {
-  const { signOut } = useAuthActions();
-
-  return (
-    <Button variant="outline" size="sm" onClick={() => void signOut()}>
-      Sign out
-    </Button>
   );
 }
 
