@@ -8,6 +8,10 @@ const USERNAME_FALLBACK = "user";
 const USERNAME_SUFFIX_LENGTHS = [6, 12];
 const BACKFILL_BATCH_SIZE = 100;
 
+// Page routes that would shadow the profile URL of an account with the same
+// handle, so they are never handed out as usernames.
+const RESERVED_USERNAMES = new Set(["admin"]);
+
 export function usernameFromEmail(email: string) {
   const localPart = email.split("@")[0] ?? "";
   return localPart
@@ -40,6 +44,10 @@ export async function uniqueUsername(
   ];
 
   for (const candidate of candidates) {
+    if (RESERVED_USERNAMES.has(candidate)) {
+      continue;
+    }
+
     const taken = await ctx.db
       .query("users")
       .withIndex("by_username", (q) => q.eq("username", candidate))
