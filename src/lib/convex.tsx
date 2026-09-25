@@ -4,7 +4,7 @@ import {
 } from "@convex-dev/better-auth/react";
 import { CONVEX_URL } from "astro:env/client";
 import { ConvexReactClient } from "convex/react";
-import { useState, type FunctionComponent, type JSX } from "react";
+import { useState, type FunctionComponent } from "react";
 import { authClient } from "@/lib/auth-client";
 import { getOrCreateClientId } from "@/lib/client-id";
 import { useLinkAnonymousVotes } from "@/lib/use-link-anonymous-votes";
@@ -17,7 +17,7 @@ function LinkAnonymousVotes() {
   return null;
 }
 
-export function withConvexProvider<Props extends JSX.IntrinsicAttributes>(
+export function withConvexProvider<Props extends object>(
   Component: FunctionComponent<Props>,
 ) {
   return function WithConvexProvider(props: Props) {
