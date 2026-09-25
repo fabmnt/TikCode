@@ -18,6 +18,7 @@ import type * as roles from "../roles.js";
 import type * as seed from "../seed.js";
 import type * as seedData from "../seedData.js";
 import type * as slug from "../slug.js";
+import type * as users from "../users.js";
 
 import type {
   ApiFromModules,
@@ -36,6 +37,7 @@ declare const fullApi: ApiFromModules<{
   seed: typeof seed;
   seedData: typeof seedData;
   slug: typeof slug;
+  users: typeof users;
 }>;
 
 /**
