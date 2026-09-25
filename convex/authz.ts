@@ -21,7 +21,7 @@ async function appUserByAuthId(ctx: QueryCtx | MutationCtx, authId: string) {
     .unique();
 }
 
-export async function requireAdmin(
+export async function requireUser(
   ctx: QueryCtx | MutationCtx,
 ): Promise<Doc<"users">> {
   const authUser = await authComponent.safeGetAuthUser(ctx);
@@ -30,7 +30,18 @@ export async function requireAdmin(
   }
 
   const user = await appUserByAuthId(ctx, authUser._id);
-  if (user?.role !== "admin") {
+  if (!user) {
+    throw new ConvexError("Sign in to continue");
+  }
+
+  return user;
+}
+
+export async function requireAdmin(
+  ctx: QueryCtx | MutationCtx,
+): Promise<Doc<"users">> {
+  const user = await requireUser(ctx);
+  if (user.role !== "admin") {
     throw new ConvexError("Admin access required");
   }
 

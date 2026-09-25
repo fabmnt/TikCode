@@ -58,7 +58,7 @@ export const publishDraft = mutation({
     await ctx.db.insert("quizzes", {
       slug: draft.slug,
       prompt: draft.prompt,
-      code: draft.code,
+      description: draft.description,
       language: draft.language,
       topic: draft.topic,
       difficulty: draft.difficulty,

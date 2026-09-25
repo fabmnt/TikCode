@@ -14,8 +14,10 @@ import type * as drafts from "../drafts.js";
 import type * as generate from "../generate.js";
 import type * as http from "../http.js";
 import type * as quizzes from "../quizzes.js";
+import type * as roles from "../roles.js";
 import type * as seed from "../seed.js";
 import type * as seedData from "../seedData.js";
+import type * as slug from "../slug.js";
 
 import type {
   ApiFromModules,
@@ -30,8 +32,10 @@ declare const fullApi: ApiFromModules<{
   generate: typeof generate;
   http: typeof http;
   quizzes: typeof quizzes;
+  roles: typeof roles;
   seed: typeof seed;
   seedData: typeof seedData;
+  slug: typeof slug;
 }>;
 
 /**

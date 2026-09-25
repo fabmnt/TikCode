@@ -2,7 +2,7 @@ import {
   paginationOptsValidator,
   paginationResultValidator,
 } from "convex/server";
-import { ConvexError, v } from "convex/values";
+import { ConvexError, v, type Infer } from "convex/values";
 import {
   mutation,
   query,
@@ -10,11 +10,17 @@ import {
   type QueryCtx,
 } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
+import { requireUser } from "./authz";
 import { difficulty, language, quizOption, topic } from "./schema";
+import { slugify } from "./slug";
 
 const LINK_PAGE_SIZE = 100;
 const LINK_SCAN_LIMIT = 500;
 const ACCOUNT_CLIENT_PREFIX = "user:";
+const MAX_QUIZZES_PER_BATCH = 10;
+const MIN_OPTIONS = 2;
+const MAX_OPTIONS = 6;
+const SLUG_ATTEMPTS = 40;
 
 function emptyCounts(optionIds: string[]) {
   return Object.fromEntries(optionIds.map((id) => [id, 0]));
@@ -103,9 +109,10 @@ async function changeOptionCount(
 const feedQuiz = v.object({
   _id: v.id("quizzes"),
   prompt: v.string(),
-  code: v.string(),
+  description: v.string(),
   language,
   options: v.array(quizOption),
+  authorName: v.optional(v.string()),
 });
 
 const feedItem = v.union(
@@ -124,9 +131,10 @@ function publicQuiz(quiz: Doc<"quizzes">) {
   return {
     _id: quiz._id,
     prompt: quiz.prompt,
-    code: quiz.code,
+    description: quiz.description,
     language: quiz.language,
     options: quiz.options,
+    ...(quiz.authorName ? { authorName: quiz.authorName } : {}),
   };
 }
 
@@ -346,5 +354,125 @@ export const linkAnonymousVotes = mutation({
     }
 
     return { linked, dropped, hasMore: !isDone };
+  },
+});
+
+const quizInput = v.object({
+  prompt: v.string(),
+  description: v.string(),
+  language,
+  topic,
+  difficulty,
+  options: v.array(quizOption),
+  correctOptionId: v.string(),
+  explanation: v.string(),
+});
+
+type QuizInput = Infer<typeof quizInput>;
+
+async function slugTaken(ctx: MutationCtx, slug: string) {
+  const published = await ctx.db
+    .query("quizzes")
+    .withIndex("by_slug", (q) => q.eq("slug", slug))
+    .unique();
+  if (published) {
+    return true;
+  }
+
+  const draft = await ctx.db
+    .query("quizDrafts")
+    .withIndex("by_slug", (q) => q.eq("slug", slug))
+    .unique();
+
+  return draft !== null;
+}
+
+async function freeSlug(ctx: MutationCtx, prompt: string) {
+  const base = slugify(prompt) || "quiz";
+
+  for (let attempt = 1; attempt <= SLUG_ATTEMPTS; attempt += 1) {
+    const candidate = attempt === 1 ? base : `${base}-${attempt}`;
+    if (!(await slugTaken(ctx, candidate))) {
+      return candidate;
+    }
+  }
+
+  throw new ConvexError(
+    "This statement is too close to an existing quiz. Rewrite it and try again.",
+  );
+}
+
+function cleanQuiz(input: QuizInput) {
+  const prompt = input.prompt.trim();
+  const description = input.description.trim();
+  const explanation = input.explanation.trim();
+  const optionIds = new Set(input.options.map((option) => option.id));
+
+  if (prompt === "") {
+    throw new ConvexError("Every quiz needs a statement.");
+  }
+  if (description === "") {
+    throw new ConvexError("Every quiz needs a description.");
+  }
+  if (explanation === "") {
+    throw new ConvexError("Every quiz needs an explanation.");
+  }
+  if (
+    input.options.length < MIN_OPTIONS ||
+    input.options.length > MAX_OPTIONS
+  ) {
+    throw new ConvexError(
+      `Every quiz needs between ${MIN_OPTIONS} and ${MAX_OPTIONS} options.`,
+    );
+  }
+  if (optionIds.size !== input.options.length) {
+    throw new ConvexError("Option letters must be unique inside a quiz.");
+  }
+  if (!optionIds.has(input.correctOptionId)) {
+    throw new ConvexError("Pick the correct option for every quiz.");
+  }
+
+  const options = input.options.map((option) => ({
+    id: option.id,
+    label: option.label.trim(),
+  }));
+  if (options.some((option) => option.label === "")) {
+    throw new ConvexError("Every option needs text.");
+  }
+
+  return { prompt, description, explanation, options };
+}
+
+export const createQuizzes = mutation({
+  args: { quizzes: v.array(quizInput) },
+  returns: v.object({ created: v.number() }),
+  handler: async (ctx, { quizzes }) => {
+    const user = await requireUser(ctx);
+
+    if (quizzes.length === 0) {
+      throw new ConvexError("Add at least one quiz.");
+    }
+    if (quizzes.length > MAX_QUIZZES_PER_BATCH) {
+      throw new ConvexError(
+        `You can create up to ${MAX_QUIZZES_PER_BATCH} quizzes at a time.`,
+      );
+    }
+
+    for (const quiz of quizzes) {
+      const clean = cleanQuiz(quiz);
+
+      await ctx.db.insert("quizzes", {
+        ...clean,
+        slug: await freeSlug(ctx, clean.prompt),
+        language: quiz.language,
+        topic: quiz.topic,
+        difficulty: quiz.difficulty,
+        correctOptionId: quiz.correctOptionId,
+        authorId: user._id,
+        ...(user.name ? { authorName: user.name } : {}),
+      });
+    }
+
+    return { created: quizzes.length };
   },
 });

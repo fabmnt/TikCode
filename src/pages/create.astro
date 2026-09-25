@@ -1,0 +1,15 @@
+---
+import CreateQuizzes from "../components/create/CreateQuizzes.tsx";
+import Layout from "../layouts/Layout.astro";
+import { Spinner } from "../components/ui/spinner";
+---
+
+<Layout title="Create quizzes · Quizz Feed">
+  <main class="mx-auto h-dvh w-full max-w-2xl overflow-y-auto md:border-x md:border-border">
+    <CreateQuizzes client:only="react">
+      <div slot="fallback" class="flex justify-center px-4 py-16">
+        <Spinner />
+      </div>
+    </CreateQuizzes>
+  </main>
+</Layout>

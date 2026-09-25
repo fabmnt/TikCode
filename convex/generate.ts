@@ -7,12 +7,14 @@ import { z } from "zod";
 import { internal } from "./_generated/api";
 import { action } from "./_generated/server";
 import { difficulty, language, topic } from "./schema";
+import { slugify } from "./slug";
 
 const DEFAULT_MODEL = "stealth/union-alpha";
 const MAX_QUIZZES_PER_RUN = 5;
 const OPTION_IDS = ["a", "b", "c", "d"] as const;
 const MIN_CODE_LINES = 5;
 const MAX_CODE_LINES = 15;
+const FENCE_PATTERN = /```([^\n`]*)\n([\s\S]*?)```/g;
 
 type Language = Infer<typeof language>;
 type Topic = Infer<typeof topic>;
@@ -34,9 +36,9 @@ const TOPIC_BRIEF: Record<Topic, string> = {
 const SYSTEM_PROMPT = `You write multiple-choice quizzes that train developers to spot problems in code.
 
 Every quiz must follow these rules:
-- The code snippet is between ${MIN_CODE_LINES} and ${MAX_CODE_LINES} lines and looks like code from a real project.
-- The snippet is raw code. Never wrap it in markdown fences.
-- The snippet demonstrates exactly one problem, and that problem matches the requested topic.
+- The description is markdown. It holds one fenced code block of ${MIN_CODE_LINES} to ${MAX_CODE_LINES} lines and, optionally, one or two short sentences that frame the code.
+- Tag the fence with the requested language, for example \`\`\`typescript. Use only one code block per quiz.
+- The snippet looks like code from a real project and demonstrates exactly one problem that matches the requested topic.
 - The question has one defensible answer and ends with a question mark. Never ask for opinions or preferences.
 - Provide exactly 4 options, with ids "a", "b", "c" and "d". Exactly one option is correct.
 - The wrong options are plausible, but clearly wrong once the reader parses the code.
@@ -50,9 +52,11 @@ const quizSchema = z.object({
       "kebab-case identifier of at most 5 words, e.g. ts-any-escape-hatch",
     ),
   prompt: z.string().describe("One question, ending with a question mark"),
-  code: z
+  description: z
     .string()
-    .describe("The code snippet, 5 to 15 lines, without markdown fences"),
+    .describe(
+      "Markdown description with one fenced code block that holds the code snippet",
+    ),
   options: z
     .array(
       z.object({
@@ -77,16 +81,20 @@ type GenerationResult = {
   rejected: number;
 };
 
-function slugify(value: string) {
-  return value
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 60);
-}
-
 function countCodeLines(code: string) {
   return code.split("\n").filter((line) => line.trim() !== "").length;
+}
+
+function codeFences(description: string) {
+  return [...description.matchAll(FENCE_PATTERN)];
+}
+
+function withLanguageTag(description: string, language: Language) {
+  return description.replace(
+    FENCE_PATTERN,
+    (_fence, _tag: string, code: string) =>
+      `\`\`\`${language}\n${code.trimEnd()}\n\`\`\``,
+  );
 }
 
 function isUsable(quiz: GeneratedQuiz, slug: string) {
@@ -95,8 +103,8 @@ function isUsable(quiz: GeneratedQuiz, slug: string) {
   }
 
   const optionIds = new Set(quiz.options.map((option) => option.id));
-  const code = quiz.code.trim();
-  const codeLines = countCodeLines(code);
+  const fences = codeFences(quiz.description);
+  const codeLines = fences.length === 1 ? countCodeLines(fences[0][2]) : 0;
 
   const optionsAreValid =
     optionIds.size === quiz.options.length &&
@@ -105,7 +113,7 @@ function isUsable(quiz: GeneratedQuiz, slug: string) {
 
   const contentIsValid =
     quiz.prompt.trim().endsWith("?") &&
-    !code.includes("```") &&
+    fences.length === 1 &&
     codeLines >= MIN_CODE_LINES &&
     codeLines <= MAX_CODE_LINES &&
     quiz.explanation.trim() !== "";
@@ -191,6 +199,7 @@ export const generateDrafts = action({
       return [
         {
           ...quiz,
+          description: withLanguageTag(quiz.description, request.language),
           slug,
           topic: request.topic,
           difficulty: request.difficulty,

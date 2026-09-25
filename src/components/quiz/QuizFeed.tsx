@@ -1,10 +1,12 @@
 import { useState } from "react";
 import { useMutation, usePaginatedQuery, useQuery } from "convex/react";
-import { CircleHelpIcon } from "lucide-react";
+import { CircleHelpIcon, PlusIcon } from "lucide-react";
 import { api } from "../../../convex/_generated/api";
 import { withConvexProvider } from "@/lib/convex";
 import { getOrCreateClientId } from "@/lib/client-id";
 import { FEED_PAGE_SIZE, isNearby, withStats } from "@/lib/feed";
+import { cn } from "@/lib/utils";
+import { buttonVariants } from "@/components/ui/button";
 import { FeedAccountButton } from "@/components/auth/FeedAccountButton";
 import { QuizCard } from "@/components/quiz/QuizCard";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -18,7 +20,14 @@ import {
 
 function FeedHeader() {
   return (
-    <header className="flex h-12 shrink-0 items-center justify-end px-3">
+    <header className="flex h-12 shrink-0 items-center justify-between px-3">
+      <a
+        href="/create"
+        className={cn(buttonVariants({ variant: "ghost", size: "sm" }))}
+      >
+        <PlusIcon />
+        Create
+      </a>
       <FeedAccountButton />
     </header>
   );

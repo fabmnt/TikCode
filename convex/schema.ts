@@ -25,7 +25,7 @@ export const quizOption = v.object({
 export const quizContent = {
   slug: v.string(),
   prompt: v.string(),
-  code: v.string(),
+  description: v.string(),
   language,
   topic,
   difficulty,
@@ -34,16 +34,26 @@ export const quizContent = {
   explanation: v.string(),
 };
 
+export const quizAuthor = {
+  authorId: v.optional(v.id("users")),
+  authorName: v.optional(v.string()),
+};
+
 export default defineSchema({
   users: defineTable({
     authId: v.string(),
     email: v.string(),
     name: v.optional(v.string()),
     image: v.optional(v.string()),
+    username: v.optional(v.string()),
     role,
-  }).index("by_authId", ["authId"]),
+  })
+    .index("by_authId", ["authId"])
+    .index("by_username", ["username"]),
 
-  quizzes: defineTable(quizContent).index("by_slug", ["slug"]),
+  quizzes: defineTable({ ...quizContent, ...quizAuthor }).index("by_slug", [
+    "slug",
+  ]),
 
   quizDrafts: defineTable(quizContent).index("by_slug", ["slug"]),
 
