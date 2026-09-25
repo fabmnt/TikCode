@@ -138,17 +138,19 @@ export function GroupQuizComposer({
           return next.length > 0 ? next : [emptyQuizDraft()];
         });
 
-        const dropped =
-          result.rejected > 0
-            ? ` ${result.rejected} failed validation and were dropped.`
+        const short =
+          generated.length < result.requested
+            ? ` ${result.requested - generated.length} of ${result.requested} could not be generated.`
             : "";
         const searchHint = result.searched
           ? ""
           : " The web search step failed, so these come from the model's own knowledge.";
         setGenerateMessage(
-          generated.length === 1
-            ? `1 quiz generated. Review and edit it below.${dropped}${searchHint}`
-            : `${generated.length} quizzes generated. Review and edit them below.${dropped}${searchHint}`,
+          generated.length === 0
+            ? `No quizzes could be generated. Try a more specific prompt.${searchHint}`
+            : generated.length === 1
+              ? `1 quiz generated. Review and edit it below.${short}${searchHint}`
+              : `${generated.length} quizzes generated. Review and edit them below.${short}${searchHint}`,
         );
       })
       .catch((cause: unknown) =>

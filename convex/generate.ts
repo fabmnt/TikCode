@@ -17,12 +17,27 @@ const ADMIN_MODEL_DEFAULT = "stealth/union-alpha";
 // answers the schema request in prose.
 const GROUP_MODEL_DEFAULT = "dots-studio/dots-3-note-preview:free";
 const MAX_QUIZZES_PER_RUN = 5;
+// Free models miss format rules often, so a short batch is retried with the
+// rejection reasons attached. Each attempt is another model call, but no extra
+// web search, and it stops as soon as the requested count is reached.
+const MAX_GENERATION_ATTEMPTS = 3;
 const OPTION_IDS = ["a", "b", "c", "d"] as const;
 const DIFFICULTIES = ["beginner", "intermediate", "advanced"] as const;
 const MIN_CODE_LINES = 5;
 const MAX_CODE_LINES = 15;
 const WEB_SEARCH_RESULTS = 5;
 const FENCE_PATTERN = /^ {0,3}```([^\n`]*)\n([\s\S]*?)```/gm;
+
+// Phrases that give the answer away in a description the player reads before
+// answering.
+const LEAK_PATTERNS = [
+  /correct answer/i,
+  /answer is/i,
+  /is an antipattern/i,
+  /not recommended/i,
+  /is incorrect/i,
+  /is a bug/i,
+];
 
 type Topic = Infer<typeof topic>;
 type Difficulty = Infer<typeof difficulty>;
@@ -49,6 +64,13 @@ Every quiz must follow these rules:
 const RESEARCH_SYSTEM_PROMPT = `You research topics so quiz writers can ground their quizzes in current facts.
 
 Search the web with the web_search tool, then answer with a short bullet list of concrete findings. Keep it under 150 words. Skip the search when the request is about timeless code problems rather than recent releases, versions, or events.`;
+
+// Free models drift back to prose if the format is only stated once, so the
+// group flow repeats the rules that reviews reject on.
+const GROUP_FORMAT_PROMPT = `Format rules that reviews reject when broken:
+- The code block is mandatory. A description without a fenced code block is invalid.
+- The description must not name the problem, the fix, or the answer. It only frames the snippet ("The following function...").
+- Never write phrases like "the correct answer is", "this is an antipattern", or "which is not recommended" in the description.`;
 
 const quizCoreSchema = z.object({
   prompt: z.string().describe("One question, ending with a question mark"),
@@ -103,31 +125,57 @@ function codeFences(description: string) {
   return [...description.matchAll(FENCE_PATTERN)];
 }
 
-function isUsable(quiz: CoreQuiz) {
+// Why a generated quiz is not usable, or null when it is. The reason is fed
+// back to the model when a batch comes back short.
+function rejectionReason(quiz: CoreQuiz, rejectLeaks: boolean) {
   const optionIds = new Set(quiz.options.map((option) => option.id));
+  const optionCount = quiz.options.length;
   const fences = codeFences(quiz.description);
   const codeLines = fences.length === 1 ? countCodeLines(fences[0][2]) : 0;
 
-  const optionsAreValid =
-    optionIds.size === quiz.options.length &&
-    optionIds.has(quiz.correctOptionId) &&
-    quiz.options.every((option) => option.label.trim() !== "");
+  if (fences.length === 0) {
+    return "the description had no fenced code block";
+  }
+  if (fences.length > 1) {
+    return "the description had more than one code block";
+  }
+  if (codeLines < MIN_CODE_LINES) {
+    return `the code block had ${codeLines} lines instead of at least ${MIN_CODE_LINES}`;
+  }
+  if (codeLines > MAX_CODE_LINES) {
+    return `the code block had ${codeLines} lines instead of at most ${MAX_CODE_LINES}`;
+  }
+  if (!quiz.prompt.trim().endsWith("?")) {
+    return "the question did not end with a question mark";
+  }
+  if (optionIds.size !== optionCount || !optionIds.has(quiz.correctOptionId)) {
+    return "the options were not one of each, with a correctOptionId that matches one of them";
+  }
+  if (quiz.options.some((option) => option.label.trim() === "")) {
+    return "an option had no label";
+  }
+  if (quiz.explanation.trim() === "") {
+    return "the explanation was empty";
+  }
+  if (
+    rejectLeaks &&
+    LEAK_PATTERNS.some((pattern) => pattern.test(quiz.description))
+  ) {
+    return "the description gave away the problem or the answer";
+  }
 
-  const contentIsValid =
-    quiz.prompt.trim().endsWith("?") &&
-    fences.length === 1 &&
-    codeLines >= MIN_CODE_LINES &&
-    codeLines <= MAX_CODE_LINES &&
-    quiz.explanation.trim() !== "";
+  return null;
+}
 
-  return optionsAreValid && contentIsValid;
+function isUsable(quiz: CoreQuiz) {
+  return rejectionReason(quiz, false) === null;
 }
 
 function requireApiKey() {
   const apiKey = process.env.OPENROUTER_API_KEY;
   if (!apiKey) {
     throw new ConvexError(
-      "OPENROUTER_API_KEY is not set on this Convex deployment",
+      "OPENROUTER_API_KEY is not set on this Convex deployment. Set it with `npx convex env set OPENROUTER_API_KEY <key>`.",
     );
   }
 
@@ -212,6 +260,7 @@ function buildGroupPrompt(
   request: { prompt: string; topic: Topic; difficulties: Difficulty[] },
   count: number,
   findings: string,
+  rejections: string[],
 ) {
   const difficultyLine =
     request.difficulties.length === 1
@@ -225,6 +274,12 @@ function buildGroupPrompt(
 
   if (findings !== "") {
     lines.push(`Findings from a web search you can use:\n${findings}`);
+  }
+
+  if (rejections.length > 0) {
+    lines.push(
+      `Previous quizzes were rejected because: ${[...new Set(rejections)].join("; ")}. Follow the format rules exactly this time.`,
+    );
   }
 
   return lines.join("\n");
@@ -311,7 +366,7 @@ export const generateGroupQuizzes = action({
         explanation: v.string(),
       }),
     ),
-    rejected: v.number(),
+    requested: v.number(),
     searched: v.boolean(),
   }),
   handler: async (ctx, request) => {
@@ -335,6 +390,9 @@ export const generateGroupQuizzes = action({
       throw new ConvexError("Pick at least one difficulty.");
     }
 
+    // Check the deployment is configured before spending quota or money.
+    const apiKey = requireApiKey();
+
     // Research spends real money, so each account has a small hourly budget.
     const quota = await rateLimiter.limit(ctx, "groupQuizGeneration", {
       key: String(user._id),
@@ -347,7 +405,6 @@ export const generateGroupQuizzes = action({
     }
 
     const count = clampCount(request.count);
-    const apiKey = requireApiKey();
     const model = process.env.OPENROUTER_GROUP_MODEL ?? GROUP_MODEL_DEFAULT;
 
     let findings = "";
@@ -360,22 +417,45 @@ export const generateGroupQuizzes = action({
       searched = false;
     }
 
-    const output = await generateStructuredQuizzes({
-      apiKey,
-      model,
-      schema: groupQuizSchema,
-      system: SYSTEM_PROMPT,
-      prompt: buildGroupPrompt({ ...request, prompt }, count, findings),
-      count,
-    });
+    const quizzes: Array<{
+      prompt: string;
+      description: string;
+      topic: Topic;
+      difficulty: Difficulty;
+      options: Array<{ id: string; label: string }>;
+      correctOptionId: string;
+      explanation: string;
+    }> = [];
+    const rejections: string[] = [];
 
-    const quizzes = output.flatMap((quiz) => {
-      if (!isUsable(quiz)) {
-        return [];
+    for (let attempt = 1; attempt <= MAX_GENERATION_ATTEMPTS; attempt += 1) {
+      const remaining = count - quizzes.length;
+      if (remaining === 0) {
+        break;
       }
 
-      return [
-        {
+      const output = await generateStructuredQuizzes({
+        apiKey,
+        model,
+        schema: groupQuizSchema,
+        system: `${SYSTEM_PROMPT}\n\n${GROUP_FORMAT_PROMPT}`,
+        prompt: buildGroupPrompt(
+          { ...request, prompt },
+          remaining,
+          findings,
+          attempt === 1 ? [] : rejections,
+        ),
+        count: remaining,
+      });
+
+      for (const quiz of output) {
+        const reason = rejectionReason(quiz, true);
+        if (reason !== null) {
+          rejections.push(reason);
+          continue;
+        }
+
+        quizzes.push({
           prompt: quiz.prompt,
           description: quiz.description,
           topic: request.topic,
@@ -383,10 +463,10 @@ export const generateGroupQuizzes = action({
           options: quiz.options,
           correctOptionId: quiz.correctOptionId,
           explanation: quiz.explanation,
-        },
-      ];
-    });
+        });
+      }
+    }
 
-    return { quizzes, rejected: output.length - quizzes.length, searched };
+    return { quizzes, requested: count, searched };
   },
 });
