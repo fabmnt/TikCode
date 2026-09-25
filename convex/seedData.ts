@@ -2,7 +2,6 @@ export type SeedQuiz = {
   slug: string;
   prompt: string;
   description: string;
-  language: "typescript" | "python";
   topic: "code-smell" | "antipattern" | "bad-practice";
   difficulty: "beginner" | "intermediate" | "advanced";
   options: { id: string; label: string }[];
@@ -14,7 +13,6 @@ export const SEED_QUIZZES: SeedQuiz[] = [
   {
     slug: "ts-any-escape-hatch",
     prompt: "What is the main problem in this TypeScript function?",
-    language: "typescript",
     topic: "bad-practice",
     difficulty: "beginner",
     description: `\`\`\`typescript
@@ -44,7 +42,6 @@ console.log(user.name);
   {
     slug: "py-n-plus-one-queries",
     prompt: "What problem will this code cause as the user list grows?",
-    language: "python",
     topic: "antipattern",
     difficulty: "intermediate",
     description: `\`\`\`python
@@ -71,7 +68,6 @@ def load_order_counts(users):
   {
     slug: "ts-magic-number",
     prompt: "What should you change first in this snippet?",
-    language: "typescript",
     topic: "code-smell",
     difficulty: "beginner",
     description: `\`\`\`typescript
@@ -96,7 +92,6 @@ function isAdult(age: number) {
   {
     slug: "ts-god-function",
     prompt: "What is the main design problem here?",
-    language: "typescript",
     topic: "antipattern",
     difficulty: "advanced",
     description: `\`\`\`typescript
@@ -127,7 +122,6 @@ async function processOrder(order: Order) {
   {
     slug: "py-mutable-default",
     prompt: "What goes wrong when this function is called more than once?",
-    language: "python",
     topic: "bad-practice",
     difficulty: "beginner",
     description: `\`\`\`python
@@ -157,7 +151,6 @@ second = add_item("b")
   {
     slug: "ts-boolean-blindness",
     prompt: "Why is this function hard to use correctly?",
-    language: "typescript",
     topic: "code-smell",
     difficulty: "intermediate",
     description: `\`\`\`typescript
@@ -185,7 +178,6 @@ createUser("Ada", true, false, true);
   {
     slug: "py-bare-except",
     prompt: "What is dangerous about this error handling?",
-    language: "python",
     topic: "bad-practice",
     difficulty: "beginner",
     description: `\`\`\`python
@@ -211,7 +203,6 @@ def parse_settings(raw: str) -> dict:
   {
     slug: "ts-feature-envy",
     prompt: "Where does this logic belong?",
-    language: "typescript",
     topic: "code-smell",
     difficulty: "advanced",
     description: `\`\`\`typescript
@@ -242,7 +233,6 @@ function discount(order: Order) {
   {
     slug: "ts-floating-promise",
     prompt: "What can fail in production with this submit handler?",
-    language: "typescript",
     topic: "bad-practice",
     difficulty: "intermediate",
     description: `\`\`\`typescript
@@ -275,7 +265,6 @@ function onSubmit(user: User) {
   {
     slug: "py-sql-string-format",
     prompt: "What is the main risk in this query?",
-    language: "python",
     topic: "bad-practice",
     difficulty: "intermediate",
     description: `\`\`\`python
@@ -296,7 +285,6 @@ def find_user(user_id: str):
   {
     slug: "ts-arrowhead-nesting",
     prompt: "What makes this function hard to follow?",
-    language: "typescript",
     topic: "code-smell",
     difficulty: "intermediate",
     description: `\`\`\`typescript
@@ -326,7 +314,6 @@ function deliver(order: Order | null) {
   {
     slug: "py-missing-context-manager",
     prompt: "What resource bug can this function cause?",
-    language: "python",
     topic: "code-smell",
     difficulty: "beginner",
     description: `\`\`\`python
@@ -349,7 +336,6 @@ def read_json(path: str):
   {
     slug: "ts-type-assertion-lie",
     prompt: "What does this assertion actually guarantee?",
-    language: "typescript",
     topic: "bad-practice",
     difficulty: "intermediate",
     description: `\`\`\`typescript
@@ -379,7 +365,6 @@ sendEmail(user.email);
   {
     slug: "py-mutate-while-iterating",
     prompt: "What goes wrong in this loop?",
-    language: "python",
     topic: "bad-practice",
     difficulty: "intermediate",
     description: `\`\`\`python

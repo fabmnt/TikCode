@@ -27,7 +27,6 @@ export function QuizCard({ quiz, pendingOptionId, onAnswer }: QuizCardProps) {
       <div className="border-border bg-card flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border-0 md:border">
         <RichText
           content={quiz.description}
-          language={quiz.language}
           className="min-h-0 flex-1 overflow-auto p-3"
         />
         {quiz.answered && (

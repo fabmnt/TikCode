@@ -59,7 +59,6 @@ export const publishDraft = mutation({
       slug: draft.slug,
       prompt: draft.prompt,
       description: draft.description,
-      language: draft.language,
       topic: draft.topic,
       difficulty: draft.difficulty,
       options: draft.options,

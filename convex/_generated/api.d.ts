@@ -12,8 +12,11 @@ import type * as auth from "../auth.js";
 import type * as authz from "../authz.js";
 import type * as drafts from "../drafts.js";
 import type * as generate from "../generate.js";
+import type * as groups from "../groups.js";
 import type * as http from "../http.js";
+import type * as migrations from "../migrations.js";
 import type * as quizzes from "../quizzes.js";
+import type * as rateLimits from "../rateLimits.js";
 import type * as roles from "../roles.js";
 import type * as seed from "../seed.js";
 import type * as seedData from "../seedData.js";
@@ -31,8 +34,11 @@ declare const fullApi: ApiFromModules<{
   authz: typeof authz;
   drafts: typeof drafts;
   generate: typeof generate;
+  groups: typeof groups;
   http: typeof http;
+  migrations: typeof migrations;
   quizzes: typeof quizzes;
+  rateLimits: typeof rateLimits;
   roles: typeof roles;
   seed: typeof seed;
   seedData: typeof seedData;
@@ -68,4 +74,5 @@ export declare const internal: FilterApi<
 
 export declare const components: {
   betterAuth: import("@convex-dev/better-auth/_generated/component.js").ComponentApi<"betterAuth">;
+  rateLimiter: import("@convex-dev/rate-limiter/_generated/component.js").ComponentApi<"rateLimiter">;
 };

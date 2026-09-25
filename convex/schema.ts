@@ -1,8 +1,6 @@
 import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
 
-export const language = v.union(v.literal("typescript"), v.literal("python"));
-
 export const topic = v.union(
   v.literal("code-smell"),
   v.literal("antipattern"),
@@ -22,16 +20,21 @@ export const quizOption = v.object({
   label: v.string(),
 });
 
-export const quizContent = {
-  slug: v.string(),
+// Fields every quiz carries, wherever it is stored (the public feed, the
+// generation draft queue, or a quiz group).
+export const quizBody = {
   prompt: v.string(),
   description: v.string(),
-  language,
   topic,
   difficulty,
   options: v.array(quizOption),
   correctOptionId: v.string(),
   explanation: v.string(),
+};
+
+export const quizContent = {
+  slug: v.string(),
+  ...quizBody,
 };
 
 export const quizAuthor = {
@@ -78,4 +81,43 @@ export default defineSchema({
     clientId: v.string(),
     cursor: v.string(),
   }).index("by_user_and_client", ["userId", "clientId"]),
+
+  // Quiz groups stay out of the public feed. The join token is the invite:
+  // anyone holding the link may join, and only members see the quizzes.
+  // Groups never lose members or quizzes, so the two counters cannot drift and
+  // the scoreboard and group lists never need to count rows.
+  quizGroups: defineTable({
+    name: v.string(),
+    creatorId: v.id("users"),
+    joinToken: v.string(),
+    quizCount: v.number(),
+    memberCount: v.number(),
+  })
+    .index("by_joinToken", ["joinToken"])
+    .index("by_creator", ["creatorId"]),
+
+  groupQuizzes: defineTable({
+    groupId: v.id("quizGroups"),
+    ...quizBody,
+  }).index("by_group", ["groupId"]),
+
+  groupMembers: defineTable({
+    groupId: v.id("quizGroups"),
+    userId: v.id("users"),
+  })
+    .index("by_group", ["groupId"])
+    .index("by_user", ["userId"])
+    .index("by_group_and_user", ["groupId", "userId"]),
+
+  // One answer per member per group quiz, so a member's group score is the
+  // count of `correct` rows.
+  groupAnswers: defineTable({
+    groupId: v.id("quizGroups"),
+    quizId: v.id("groupQuizzes"),
+    userId: v.id("users"),
+    optionId: v.string(),
+    correct: v.boolean(),
+  })
+    .index("by_group", ["groupId"])
+    .index("by_group_and_user", ["groupId", "userId"]),
 });

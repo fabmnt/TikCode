@@ -1,11 +1,14 @@
-import type { FunctionArgs } from "convex/server";
+import type { FunctionArgs, FunctionReturnType } from "convex/server";
 import type { api } from "../../convex/_generated/api";
 
 export type QuizInput = FunctionArgs<
   typeof api.quizzes.createQuizzes
 >["quizzes"][number];
 
-export type QuizLanguage = QuizInput["language"];
+export type GeneratedGroupQuiz = FunctionReturnType<
+  typeof api.generate.generateGroupQuizzes
+>["quizzes"][number];
+
 export type QuizTopic = QuizInput["topic"];
 export type QuizDifficulty = QuizInput["difficulty"];
 
@@ -13,7 +16,6 @@ export type QuizDraft = {
   key: string;
   prompt: string;
   description: string;
-  language: QuizLanguage;
   topic: QuizTopic;
   difficulty: QuizDifficulty;
   options: string[];
@@ -33,13 +35,43 @@ export function emptyQuizDraft(): QuizDraft {
     key: crypto.randomUUID(),
     prompt: "",
     description: "",
-    language: "typescript",
     topic: "code-smell",
     difficulty: "intermediate",
     options: Array.from({ length: DEFAULT_OPTION_COUNT }, () => ""),
     correctIndex: null,
     explanation: "",
   };
+}
+
+// Turns a generated quiz into an editable draft, so nothing reaches a group
+// before the creator has reviewed it.
+export function draftFromGeneratedQuiz(quiz: GeneratedGroupQuiz): QuizDraft {
+  const correctIndex = quiz.options.findIndex(
+    (option) => option.id === quiz.correctOptionId,
+  );
+
+  return {
+    key: crypto.randomUUID(),
+    prompt: quiz.prompt,
+    description: quiz.description,
+    topic: quiz.topic,
+    difficulty: quiz.difficulty,
+    options: quiz.options.map((option) => option.label),
+    correctIndex: correctIndex === -1 ? null : correctIndex,
+    explanation: quiz.explanation,
+  };
+}
+
+// A draft nobody has typed into yet, so the composer can drop it in favour of
+// the quizzes it just generated.
+export function isUntouchedDraft(draft: QuizDraft) {
+  return (
+    draft.prompt.trim() === "" &&
+    draft.description.trim() === "" &&
+    draft.explanation.trim() === "" &&
+    draft.options.every((label) => label.trim() === "") &&
+    draft.correctIndex === null
+  );
 }
 
 export function quizDraftProblem(draft: QuizDraft): string | null {
@@ -66,7 +98,6 @@ export function toQuizInput(draft: QuizDraft): QuizInput {
   return {
     prompt: draft.prompt.trim(),
     description: draft.description.trim(),
-    language: draft.language,
     topic: draft.topic,
     difficulty: draft.difficulty,
     options: draft.options.map((label, index) => ({

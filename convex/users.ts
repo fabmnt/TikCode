@@ -10,7 +10,7 @@ const BACKFILL_BATCH_SIZE = 100;
 
 // Page routes that would shadow the profile URL of an account with the same
 // handle, so they are never handed out as usernames.
-const RESERVED_USERNAMES = new Set(["admin"]);
+const RESERVED_USERNAMES = new Set(["admin", "groups"]);
 
 export function usernameFromEmail(email: string) {
   const localPart = email.split("@")[0] ?? "";

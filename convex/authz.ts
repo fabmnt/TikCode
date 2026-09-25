@@ -22,15 +22,23 @@ async function appUserByAuthId(ctx: QueryCtx | MutationCtx, authId: string) {
     .unique();
 }
 
+// The app user behind the current session, or null when nobody is signed in.
+// Queries use this to answer without throwing; mutations use requireUser.
+export async function currentAppUser(
+  ctx: QueryCtx | MutationCtx,
+): Promise<Doc<"users"> | null> {
+  const authUser = await authComponent.safeGetAuthUser(ctx);
+  if (!authUser) {
+    return null;
+  }
+
+  return await appUserByAuthId(ctx, authUser._id);
+}
+
 export async function requireUser(
   ctx: QueryCtx | MutationCtx,
 ): Promise<Doc<"users">> {
-  const authUser = await authComponent.safeGetAuthUser(ctx);
-  if (!authUser) {
-    throw new ConvexError("Sign in to continue");
-  }
-
-  const user = await appUserByAuthId(ctx, authUser._id);
+  const user = await currentAppUser(ctx);
   if (!user) {
     throw new ConvexError("Sign in to continue");
   }
@@ -70,13 +78,19 @@ export const currentUser = query({
 
 export const userByAuthId = internalQuery({
   args: { authId: v.string() },
-  returns: v.union(v.null(), v.object({ role: v.union(role, v.null()) })),
+  returns: v.union(
+    v.null(),
+    v.object({
+      _id: v.id("users"),
+      role: v.union(role, v.null()),
+    }),
+  ),
   handler: async (ctx, { authId }) => {
     const user = await appUserByAuthId(ctx, authId);
     if (!user) {
       return null;
     }
 
-    return { role: user.role ?? null };
+    return { _id: user._id, role: user.role ?? null };
   },
 });

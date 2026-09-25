@@ -4,15 +4,10 @@ import { WandSparklesIcon } from "lucide-react";
 import { api } from "../../../convex/_generated/api";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
-import {
-  DIFFICULTY_LABEL,
-  LANGUAGE_LABEL,
-  TOPIC_LABEL,
-} from "@/lib/quiz-labels";
+import { DIFFICULTY_LABEL, TOPIC_LABEL } from "@/lib/quiz-labels";
 
 type Topic = keyof typeof TOPIC_LABEL;
 type Difficulty = keyof typeof DIFFICULTY_LABEL;
-type Language = keyof typeof LANGUAGE_LABEL;
 
 const MAX_COUNT = 5;
 
@@ -35,7 +30,6 @@ export function GenerationForm() {
   const generate = useAction(api.generate.generateDrafts);
   const [topic, setTopic] = useState<Topic>("code-smell");
   const [difficulty, setDifficulty] = useState<Difficulty>("intermediate");
-  const [language, setLanguage] = useState<Language>("typescript");
   const [count, setCount] = useState(3);
   const [pending, setPending] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -53,7 +47,7 @@ export function GenerationForm() {
         setMessage(null);
         setError(null);
 
-        void generate({ topic, difficulty, language, count })
+        void generate({ topic, difficulty, count })
           .then((result) => setMessage(describeResult(result)))
           .catch((cause: unknown) =>
             setError(
@@ -96,21 +90,6 @@ export function GenerationForm() {
             }
           >
             {Object.entries(DIFFICULTY_LABEL).map(([value, label]) => (
-              <option key={value} value={value}>
-                {label}
-              </option>
-            ))}
-          </select>
-        </label>
-
-        <label className="flex flex-col gap-1.5 text-sm">
-          <span className="text-muted-foreground">Language</span>
-          <select
-            className={fieldClass}
-            value={language}
-            onChange={(event) => setLanguage(event.target.value as Language)}
-          >
-            {Object.entries(LANGUAGE_LABEL).map(([value, label]) => (
               <option key={value} value={value}>
                 {label}
               </option>
