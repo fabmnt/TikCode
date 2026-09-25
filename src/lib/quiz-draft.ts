@@ -62,6 +62,18 @@ export function draftFromGeneratedQuiz(quiz: GeneratedGroupQuiz): QuizDraft {
   };
 }
 
+// A draft nobody has typed into yet, so the composer can drop it in favour of
+// the quizzes it just generated.
+export function isUntouchedDraft(draft: QuizDraft) {
+  return (
+    draft.prompt.trim() === "" &&
+    draft.description.trim() === "" &&
+    draft.explanation.trim() === "" &&
+    draft.options.every((label) => label.trim() === "") &&
+    draft.correctIndex === null
+  );
+}
+
 export function quizDraftProblem(draft: QuizDraft): string | null {
   if (draft.prompt.trim() === "") {
     return "Add a statement.";

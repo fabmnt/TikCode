@@ -12,9 +12,6 @@ import { assertQuizBatch, cleanQuiz, quizInput } from "./quizzes";
 
 const MAX_GROUP_NAME_LENGTH = 60;
 const MAX_GROUP_QUIZZES = 50;
-const MAX_GROUP_MEMBERS = 200;
-const MAX_GROUP_ANSWERS = 1000;
-const MAX_MY_GROUPS = 50;
 const TOKEN_BYTES = 16;
 
 const answerView = v.object({
@@ -80,6 +77,26 @@ function quizzesInGroup(
     .withIndex("by_group", (q) => q.eq("groupId", groupId));
 }
 
+function membersInGroup(
+  ctx: QueryCtx | MutationCtx,
+  groupId: Id<"quizGroups">,
+) {
+  return ctx.db
+    .query("groupMembers")
+    .withIndex("by_group", (q) => q.eq("groupId", groupId));
+}
+
+function answersInGroup(
+  ctx: QueryCtx | MutationCtx,
+  groupId: Id<"quizGroups">,
+) {
+  return ctx.db
+    .query("groupAnswers")
+    .withIndex("by_group", (q) => q.eq("groupId", groupId));
+}
+
+// A member answers each quiz at most once and a group holds at most
+// MAX_GROUP_QUIZZES quizzes, so this bound is exact.
 async function viewerAnswers(
   ctx: QueryCtx | MutationCtx,
   groupId: Id<"quizGroups">,
@@ -90,49 +107,39 @@ async function viewerAnswers(
     .withIndex("by_group_and_user", (q) =>
       q.eq("groupId", groupId).eq("userId", userId),
     )
-    .take(MAX_GROUP_ANSWERS);
+    .take(MAX_GROUP_QUIZZES);
 }
 
-// Best score first; members who answered less follow, then by name.
+// Every member and answer is read, so large groups keep exact standings
+// instead of losing rows to a cap. Best score first; members who answered less
+// follow, then by name.
 async function buildScoreboard(
   ctx: QueryCtx,
   group: Doc<"quizGroups">,
   viewer: Doc<"users">,
 ) {
-  const members = await ctx.db
-    .query("groupMembers")
-    .withIndex("by_group", (q) => q.eq("groupId", group._id))
-    .take(MAX_GROUP_MEMBERS);
-  const total = (await quizzesInGroup(ctx, group._id).take(MAX_GROUP_QUIZZES))
-    .length;
-  const answers = await ctx.db
-    .query("groupAnswers")
-    .withIndex("by_group", (q) => q.eq("groupId", group._id))
-    .take(MAX_GROUP_ANSWERS);
-
   const totals = new Map<Id<"users">, { correct: number; answered: number }>();
-  for (const answer of answers) {
+  for await (const answer of answersInGroup(ctx, group._id)) {
     const score = totals.get(answer.userId) ?? { correct: 0, answered: 0 };
     score.answered += 1;
     score.correct += answer.correct ? 1 : 0;
     totals.set(answer.userId, score);
   }
 
-  const entries = await Promise.all(
-    members.map(async (member) => {
-      const user = await ctx.db.get(member.userId);
-      const score = totals.get(member.userId) ?? { correct: 0, answered: 0 };
+  const entries = [];
+  for await (const member of membersInGroup(ctx, group._id)) {
+    const user = await ctx.db.get(member.userId);
+    const score = totals.get(member.userId) ?? { correct: 0, answered: 0 };
 
-      return {
-        name: user?.name ?? null,
-        username: user?.username ?? null,
-        correct: score.correct,
-        answered: score.answered,
-        completed: total > 0 && score.answered >= total,
-        isViewer: member.userId === viewer._id,
-      };
-    }),
-  );
+    entries.push({
+      name: user?.name ?? null,
+      username: user?.username ?? null,
+      correct: score.correct,
+      answered: score.answered,
+      completed: group.quizCount > 0 && score.answered >= group.quizCount,
+      isViewer: member.userId === viewer._id,
+    });
+  }
 
   entries.sort(
     (a, b) =>
@@ -169,6 +176,8 @@ export const createGroup = mutation({
       name: cleanName,
       creatorId: user._id,
       joinToken,
+      quizCount: quizzes.length,
+      memberCount: 1,
     });
     await ctx.db.insert("groupMembers", { groupId, userId: user._id });
 
@@ -198,47 +207,32 @@ export const listMyGroups = query({
       return [];
     }
 
-    const created = await ctx.db
+    const entries: Array<{ group: Doc<"quizGroups">; isCreator: boolean }> = [];
+    for await (const group of ctx.db
       .query("quizGroups")
       .withIndex("by_creator", (q) => q.eq("creatorId", user._id))
-      .order("desc")
-      .take(MAX_MY_GROUPS);
-    const memberships = await ctx.db
+      .order("desc")) {
+      entries.push({ group, isCreator: true });
+    }
+
+    for await (const row of ctx.db
       .query("groupMembers")
       .withIndex("by_user", (q) => q.eq("userId", user._id))
-      .order("desc")
-      .take(MAX_MY_GROUPS);
-
-    const joined: Doc<"quizGroups">[] = [];
-    for (const row of memberships) {
+      .order("desc")) {
       const group = await ctx.db.get(row.groupId);
       if (group && group.creatorId !== user._id) {
-        joined.push(group);
+        entries.push({ group, isCreator: false });
       }
     }
 
-    const entries = [
-      ...created.map((group) => ({ group, isCreator: true })),
-      ...joined.map((group) => ({ group, isCreator: false })),
-    ];
-
-    return await Promise.all(
-      entries.map(async ({ group, isCreator }) => ({
-        _id: group._id,
-        name: group.name,
-        joinToken: group.joinToken,
-        isCreator,
-        quizCount: (
-          await quizzesInGroup(ctx, group._id).take(MAX_GROUP_QUIZZES)
-        ).length,
-        memberCount: (
-          await ctx.db
-            .query("groupMembers")
-            .withIndex("by_group", (q) => q.eq("groupId", group._id))
-            .take(MAX_GROUP_MEMBERS)
-        ).length,
-      })),
-    );
+    return entries.map(({ group, isCreator }) => ({
+      _id: group._id,
+      name: group.name,
+      joinToken: group.joinToken,
+      isCreator,
+      quizCount: group.quizCount,
+      memberCount: group.memberCount,
+    }));
   },
 });
 
@@ -277,15 +271,6 @@ export const getGroupByToken = query({
 
     const viewer = await currentAppUser(ctx);
     const creator = await ctx.db.get(group.creatorId);
-    const memberCount = (
-      await ctx.db
-        .query("groupMembers")
-        .withIndex("by_group", (q) => q.eq("groupId", group._id))
-        .take(MAX_GROUP_MEMBERS + 1)
-    ).length;
-    const quizCount = (
-      await quizzesInGroup(ctx, group._id).take(MAX_GROUP_QUIZZES + 1)
-    ).length;
     const isCreator = viewer !== null && viewer._id === group.creatorId;
     const isMember =
       isCreator ||
@@ -326,7 +311,7 @@ export const getGroupByToken = query({
 
     const answered = answers.length;
     const correct = answers.filter((answer) => answer.correct).length;
-    const completed = quizzes.length > 0 && answered >= quizzes.length;
+    const completed = group.quizCount > 0 && answered >= group.quizCount;
 
     return {
       _id: group._id,
@@ -334,15 +319,15 @@ export const getGroupByToken = query({
       joinToken: group.joinToken,
       creatorName: creator?.name ?? null,
       creatorUsername: creator?.username ?? null,
-      memberCount,
-      quizCount,
+      memberCount: group.memberCount,
+      quizCount: group.quizCount,
       isCreator,
       isMember,
       quizzes,
       progress: {
         answered,
         correct,
-        total: quizzes.length,
+        total: group.quizCount,
         completed,
       },
       scoreboard:
@@ -373,6 +358,7 @@ export const joinGroup = mutation({
       groupId: group._id,
       userId: user._id,
     });
+    await ctx.db.patch(group._id, { memberCount: group.memberCount + 1 });
 
     return { groupId: group._id, joined: true };
   },
@@ -393,8 +379,7 @@ export const addGroupQuizzes = mutation({
     }
     assertQuizBatch(quizzes);
 
-    const existing = await quizzesInGroup(ctx, groupId).take(MAX_GROUP_QUIZZES);
-    if (existing.length + quizzes.length > MAX_GROUP_QUIZZES) {
+    if (group.quizCount + quizzes.length > MAX_GROUP_QUIZZES) {
       throw new ConvexError(
         `A group can hold up to ${MAX_GROUP_QUIZZES} quizzes.`,
       );
@@ -403,6 +388,9 @@ export const addGroupQuizzes = mutation({
     for (const quiz of quizzes) {
       await ctx.db.insert("groupQuizzes", { groupId, ...cleanQuiz(quiz) });
     }
+    await ctx.db.patch(groupId, {
+      quizCount: group.quizCount + quizzes.length,
+    });
 
     return { created: quizzes.length };
   },

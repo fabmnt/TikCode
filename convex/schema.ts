@@ -84,10 +84,14 @@ export default defineSchema({
 
   // Quiz groups stay out of the public feed. The join token is the invite:
   // anyone holding the link may join, and only members see the quizzes.
+  // Groups never lose members or quizzes, so the two counters cannot drift and
+  // the scoreboard and group lists never need to count rows.
   quizGroups: defineTable({
     name: v.string(),
     creatorId: v.id("users"),
     joinToken: v.string(),
+    quizCount: v.number(),
+    memberCount: v.number(),
   })
     .index("by_joinToken", ["joinToken"])
     .index("by_creator", ["creatorId"]),

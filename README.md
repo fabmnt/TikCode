@@ -57,7 +57,15 @@ Convex Auth tables cannot stay in the database once this schema is deployed. Bef
 The quiz `language` field was retired. Convex validates existing documents on every schema push, so a deployment that still stores `language` on `quizzes` or `quizDrafts` refuses the push. Migrate in three steps instead of deleting data:
 
 1. Add `language: v.optional(v.union(v.literal("typescript"), v.literal("python")))` to `quizContent` in `convex/schema.ts` and push.
-2. Run `npx convex run migrations:stripQuizLanguage` and `npx convex run migrations:stripQuizDraftLanguage`.
+2. Strip the field from every document:
+
+   ```sh
+   npx convex run migrations:stripQuizLanguage
+   npx convex run migrations:stripQuizDraftLanguage
+   ```
+
+   Each call rewrites one batch of 100 documents and schedules the remaining batches. On a deployment with more documents than that, let the scheduled work run and then call both commands again. Repeating is safe: once a command reports `"stripped": 0`, no document in that table still carries the field.
+
 3. Remove the optional field again and push.
 
 ## Quiz groups
@@ -82,7 +90,7 @@ Quiz generation runs through OpenRouter. Set these on the Convex deployment:
 | `OPENROUTER_MODEL`       | Optional, model for admin drafts                                                                        |
 | `OPENROUTER_GROUP_MODEL` | Optional, model for group quizzes. Must be a free model with structured output support and tool calling |
 
-Group generation first asks the model to research the topic with the OpenRouter web search server tool, then asks for the quizzes as structured JSON. Each search is billed by OpenRouter (a fraction of a cent with the default Exa engine), on top of the free model.
+Group generation first asks the model to research the topic with the OpenRouter web search server tool, then asks for the quizzes as structured JSON. Each search is billed by OpenRouter (a fraction of a cent with the default Exa engine), on top of the free model. Because of that, each account gets 5 generation runs per hour, enforced in `convex/rateLimits.ts`.
 
 ## Commands
 

@@ -78,13 +78,19 @@ export const currentUser = query({
 
 export const userByAuthId = internalQuery({
   args: { authId: v.string() },
-  returns: v.union(v.null(), v.object({ role: v.union(role, v.null()) })),
+  returns: v.union(
+    v.null(),
+    v.object({
+      _id: v.id("users"),
+      role: v.union(role, v.null()),
+    }),
+  ),
   handler: async (ctx, { authId }) => {
     const user = await appUserByAuthId(ctx, authId);
     if (!user) {
       return null;
     }
 
-    return { role: user.role ?? null };
+    return { _id: user._id, role: user.role ?? null };
   },
 });

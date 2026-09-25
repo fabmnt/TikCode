@@ -10,6 +10,7 @@ import {
   MAX_QUIZZES_PER_BATCH,
   draftFromGeneratedQuiz,
   emptyQuizDraft,
+  isUntouchedDraft,
   quizDraftProblem,
   toQuizInput,
   type QuizDraft,
@@ -108,7 +109,10 @@ export function GroupQuizComposer({
       return;
     }
 
-    const room = MAX_QUIZZES_PER_BATCH - drafts.length;
+    // Untouched starter drafts give way to the generated quizzes, so the
+    // creator does not have to delete a blank quiz before saving.
+    const kept = drafts.filter((draft) => !isUntouchedDraft(draft));
+    const room = MAX_QUIZZES_PER_BATCH - kept.length;
     if (room <= 0) {
       setGenerateError(
         `A group can take up to ${MAX_QUIZZES_PER_BATCH} quizzes at a time. Save these first.`,
@@ -127,7 +131,12 @@ export function GroupQuizComposer({
         const generated = result.quizzes
           .map(draftFromGeneratedQuiz)
           .slice(0, room);
-        setDrafts((current) => [...current, ...generated]);
+        setDrafts((current) => {
+          const remaining = current.filter((draft) => !isUntouchedDraft(draft));
+          const next = [...remaining, ...generated];
+
+          return next.length > 0 ? next : [emptyQuizDraft()];
+        });
 
         const dropped =
           result.rejected > 0

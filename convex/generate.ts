@@ -7,6 +7,7 @@ import { z } from "zod";
 import { internal } from "./_generated/api";
 import { action } from "./_generated/server";
 import { difficulty, quizOption, topic } from "./schema";
+import { rateLimiter } from "./rateLimits";
 import { slugify } from "./slug";
 
 const ADMIN_MODEL_DEFAULT = "stealth/union-alpha";
@@ -177,7 +178,9 @@ async function researchTopic(options: {
   const { text } = await generateText({
     model: openrouter.chat(options.model),
     tools: {
-      web_search: openrouter.tools.webSearch({ maxResults: WEB_SEARCH_RESULTS }),
+      web_search: openrouter.tools.webSearch({
+        maxResults: WEB_SEARCH_RESULTS,
+      }),
     },
     system: RESEARCH_SYSTEM_PROMPT,
     prompt: `Research this topic: ${options.prompt}`,
@@ -330,6 +333,17 @@ export const generateGroupQuizzes = action({
     }
     if (request.difficulties.length === 0) {
       throw new ConvexError("Pick at least one difficulty.");
+    }
+
+    // Research spends real money, so each account has a small hourly budget.
+    const quota = await rateLimiter.limit(ctx, "groupQuizGeneration", {
+      key: String(user._id),
+    });
+    if (!quota.ok) {
+      const minutes = Math.max(1, Math.ceil((quota.retryAfter ?? 0) / 60000));
+      throw new ConvexError(
+        `You have generated quizzes recently. Try again in ${minutes} minute${minutes === 1 ? "" : "s"}.`,
+      );
     }
 
     const count = clampCount(request.count);
