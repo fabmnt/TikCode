@@ -1,13 +1,19 @@
 import { useState, type ReactNode } from "react";
 import { useQuery } from "convex/react";
-import { HouseIcon, LogInIcon, PlusIcon, UserRoundIcon } from "lucide-react";
+import {
+  HouseIcon,
+  LogInIcon,
+  PlusIcon,
+  UserRoundIcon,
+  UsersIcon,
+} from "lucide-react";
 import { api } from "../../../convex/_generated/api";
 import { authClient } from "@/lib/auth-client";
 import { useSignedIn } from "@/lib/use-signed-in";
 import { cn } from "@/lib/utils";
 import { Spinner } from "@/components/ui/spinner";
 
-export type NavTab = "feed" | "create" | "profile";
+export type NavTab = "feed" | "groups" | "create" | "profile";
 
 const TAB_CLASS =
   "flex h-12 flex-1 items-center justify-center gap-1 text-[0.7rem] font-medium";
@@ -123,6 +129,12 @@ export function BottomNav({ active }: { active: NavTab }) {
         label="Feed"
         icon={<HouseIcon className="size-5" />}
         active={active === "feed"}
+      />
+      <TabLink
+        href="/groups"
+        label="Groups"
+        icon={<UsersIcon className="size-5" />}
+        active={active === "groups"}
       />
       <TabLink
         href="/create"

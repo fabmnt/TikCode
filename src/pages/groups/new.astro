@@ -1,0 +1,23 @@
+---
+import CreateGroup from "../../components/groups/CreateGroup.tsx";
+import { Skeleton } from "../../components/ui/skeleton";
+import Layout from "../../layouts/Layout.astro";
+---
+
+<Layout title="New group · Quizz Feed">
+  <main class="mx-auto flex h-dvh w-full max-w-2xl flex-col overflow-hidden md:border-x md:border-border">
+    <header class="flex flex-col gap-1 px-4 pt-6">
+      <h1 class="text-lg font-medium">New group</h1>
+      <p class="text-muted-foreground text-sm">
+        Write the quizzes yourself or generate them with AI, then review and
+        edit every quiz before you create the group.
+      </p>
+    </header>
+    <CreateGroup client:only="react">
+      <div slot="fallback" class="flex min-h-0 flex-1 flex-col gap-4 px-4 py-6">
+        <Skeleton class="h-9 w-full" />
+        <Skeleton class="h-40 w-full" />
+      </div>
+    </CreateGroup>
+  </main>
+</Layout>

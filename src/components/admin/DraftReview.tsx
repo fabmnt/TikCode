@@ -14,11 +14,7 @@ import {
 } from "@/components/ui/empty";
 import { Spinner } from "@/components/ui/spinner";
 import { RichText } from "@/components/quiz/RichText";
-import {
-  DIFFICULTY_LABEL,
-  LANGUAGE_LABEL,
-  TOPIC_LABEL,
-} from "@/lib/quiz-labels";
+import { DIFFICULTY_LABEL, TOPIC_LABEL } from "@/lib/quiz-labels";
 import { cn } from "@/lib/utils";
 
 type DraftCardProps = {
@@ -39,7 +35,6 @@ function DraftCard({
   return (
     <article className="border-border flex flex-col gap-3 rounded-xl border p-4">
       <header className="flex flex-wrap items-center gap-2">
-        <Badge variant="outline">{LANGUAGE_LABEL[draft.language]}</Badge>
         <Badge variant="outline">{TOPIC_LABEL[draft.topic]}</Badge>
         <Badge variant="outline">{DIFFICULTY_LABEL[draft.difficulty]}</Badge>
         <span className="text-muted-foreground ml-auto font-mono text-xs">
@@ -52,7 +47,6 @@ function DraftCard({
       <div className="h-40">
         <RichText
           content={draft.description}
-          language={draft.language}
           className="border-border bg-card h-full overflow-auto rounded-lg border p-3"
         />
       </div>

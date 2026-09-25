@@ -37,8 +37,8 @@ function decodeHtml(value: string) {
   );
 }
 
-function resolveLanguage(tag: string | undefined, fallback: string) {
-  return lang((tag ?? "").trim()) ?? lang(fallback) ?? FALLBACK_LANGUAGE;
+function resolveLanguage(tag: string | undefined) {
+  return lang((tag ?? "").trim()) ?? FALLBACK_LANGUAGE;
 }
 
 function codeBlockHtml(source: string, language: LanguageName) {
@@ -47,59 +47,47 @@ function codeBlockHtml(source: string, language: LanguageName) {
   return `<pre class="sh-code">\n<code>${html}</code>\n</pre>`;
 }
 
-const parsers = new Map<string, Marked>();
-
-function parserFor(fallbackLanguage: string) {
-  const cached = parsers.get(fallbackLanguage);
-  if (cached) {
-    return cached;
-  }
-
-  const parser = new Marked({
-    gfm: true,
-    breaks: true,
-    renderer: {
-      code({ text, lang, escaped }) {
-        return codeBlockHtml(
-          escaped ? decodeHtml(text) : text,
-          resolveLanguage(lang, fallbackLanguage),
-        );
-      },
-      html() {
-        return "";
-      },
-      image({ text }) {
-        return escapeHtml(text);
-      },
-      link(this: Renderer, { href, tokens }) {
-        const label = this.parser.parseInline(tokens);
-        const target = href.trim();
-
-        if (!SAFE_HREF.test(target)) {
-          return label;
-        }
-
-        return `<a href="${escapeHtml(target)}" target="_blank" rel="noopener noreferrer">${label}</a>`;
-      },
+// Fenced code blocks are highlighted with the language of their own fence tag;
+// untagged fences fall back to plain text.
+const parser = new Marked({
+  gfm: true,
+  breaks: true,
+  renderer: {
+    code({ text, lang, escaped }) {
+      return codeBlockHtml(
+        escaped ? decodeHtml(text) : text,
+        resolveLanguage(lang),
+      );
     },
-  });
+    html() {
+      return "";
+    },
+    image({ text }) {
+      return escapeHtml(text);
+    },
+    link(this: Renderer, { href, tokens }) {
+      const label = this.parser.parseInline(tokens);
+      const target = href.trim();
 
-  parsers.set(fallbackLanguage, parser);
-  return parser;
-}
+      if (!SAFE_HREF.test(target)) {
+        return label;
+      }
+
+      return `<a href="${escapeHtml(target)}" target="_blank" rel="noopener noreferrer">${label}</a>`;
+    },
+  },
+});
 
 type RichTextProps = {
   content: string;
-  language: string;
   className?: string;
 };
 
 export const RichText = memo(function RichText({
   content,
-  language,
   className,
 }: RichTextProps) {
-  const html = parserFor(language).parse(content, { async: false });
+  const html = parser.parse(content, { async: false });
 
   return (
     <div

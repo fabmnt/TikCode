@@ -2,11 +2,7 @@ import { useId, useState } from "react";
 import { CopyIcon, PlusIcon, Trash2Icon, XIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { RichText } from "@/components/quiz/RichText";
-import {
-  DIFFICULTY_LABEL,
-  LANGUAGE_LABEL,
-  TOPIC_LABEL,
-} from "@/lib/quiz-labels";
+import { DIFFICULTY_LABEL, TOPIC_LABEL } from "@/lib/quiz-labels";
 import {
   MAX_OPTIONS,
   MIN_OPTIONS,
@@ -14,7 +10,6 @@ import {
   quizDraftProblem,
   type QuizDraft,
   type QuizDifficulty,
-  type QuizLanguage,
   type QuizTopic,
 } from "@/lib/quiz-draft";
 import { cn } from "@/lib/utils";
@@ -128,7 +123,6 @@ export function QuizDraftFields({
         {preview ? (
           <RichText
             content={draft.description}
-            language={draft.language}
             className="border-border bg-card min-h-32 rounded-lg border p-3"
           />
         ) : (
@@ -137,9 +131,7 @@ export function QuizDraftFields({
             className={cn(fieldClass, "min-h-32 py-2 font-mono text-xs")}
             value={draft.description}
             placeholder={
-              "Explain the problem in markdown. Fenced code blocks are highlighted:\n\n```" +
-              draft.language +
-              "\nconst total = items.length;\n```"
+              "Explain the problem in markdown. Fenced code blocks are highlighted:\n\n```typescript\nconst total = items.length;\n```"
             }
             disabled={disabled}
             onChange={(event) => onChange({ description: event.target.value })}
@@ -147,25 +139,7 @@ export function QuizDraftFields({
         )}
       </div>
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-        <label className="flex flex-col gap-1.5 text-sm">
-          <span className="text-muted-foreground">Language</span>
-          <select
-            className={cn(fieldClass, "h-9")}
-            value={draft.language}
-            disabled={disabled}
-            onChange={(event) =>
-              onChange({ language: event.target.value as QuizLanguage })
-            }
-          >
-            {Object.entries(LANGUAGE_LABEL).map(([value, label]) => (
-              <option key={value} value={value}>
-                {label}
-              </option>
-            ))}
-          </select>
-        </label>
-
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <label className="flex flex-col gap-1.5 text-sm">
           <span className="text-muted-foreground">Topic</span>
           <select

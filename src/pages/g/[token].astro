@@ -1,0 +1,23 @@
+---
+export const prerender = false;
+
+import GroupView from "../../components/groups/GroupView.tsx";
+import { Skeleton } from "../../components/ui/skeleton";
+import Layout from "../../layouts/Layout.astro";
+
+const token = (Astro.params.token ?? "").toLowerCase();
+---
+
+<Layout title="Quizz group · Quizz Feed">
+  <main class="mx-auto flex h-dvh w-full max-w-2xl flex-col overflow-hidden md:border-x md:border-border">
+    <GroupView token={token} client:only="react">
+      <div slot="fallback" class="flex min-h-0 flex-1 flex-col gap-4 px-4 py-6">
+        <Skeleton class="h-4 w-16" />
+        <Skeleton class="h-6 w-2/3" />
+        <Skeleton class="h-4 w-40" />
+        <Skeleton class="h-24 w-full" />
+        <Skeleton class="h-40 w-full" />
+      </div>
+    </GroupView>
+  </main>
+</Layout>

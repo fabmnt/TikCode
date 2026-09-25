@@ -11,7 +11,7 @@ import {
 } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
 import { requireUser } from "./authz";
-import { difficulty, language, quizOption, topic } from "./schema";
+import { difficulty, quizOption, topic } from "./schema";
 import { slugify } from "./slug";
 
 const LINK_PAGE_SIZE = 100;
@@ -110,7 +110,6 @@ const feedQuiz = v.object({
   _id: v.id("quizzes"),
   prompt: v.string(),
   description: v.string(),
-  language,
   options: v.array(quizOption),
   authorName: v.optional(v.string()),
 });
@@ -132,7 +131,6 @@ function publicQuiz(quiz: Doc<"quizzes">) {
     _id: quiz._id,
     prompt: quiz.prompt,
     description: quiz.description,
-    language: quiz.language,
     options: quiz.options,
     ...(quiz.authorName ? { authorName: quiz.authorName } : {}),
   };
@@ -357,10 +355,9 @@ export const linkAnonymousVotes = mutation({
   },
 });
 
-const quizInput = v.object({
+export const quizInput = v.object({
   prompt: v.string(),
   description: v.string(),
-  language,
   topic,
   difficulty,
   options: v.array(quizOption),
@@ -369,6 +366,7 @@ const quizInput = v.object({
 });
 
 type QuizInput = Infer<typeof quizInput>;
+export type { QuizInput };
 
 async function slugTaken(ctx: MutationCtx, slug: string) {
   const published = await ctx.db
@@ -402,7 +400,7 @@ async function freeSlug(ctx: MutationCtx, prompt: string) {
   );
 }
 
-function cleanQuiz(input: QuizInput) {
+export function cleanQuiz(input: QuizInput) {
   const prompt = input.prompt.trim();
   const description = input.description.trim();
   const explanation = input.explanation.trim();
@@ -440,7 +438,26 @@ function cleanQuiz(input: QuizInput) {
     throw new ConvexError("Every option needs text.");
   }
 
-  return { prompt, description, explanation, options };
+  return {
+    prompt,
+    description,
+    options,
+    correctOptionId: input.correctOptionId,
+    explanation,
+    topic: input.topic,
+    difficulty: input.difficulty,
+  };
+}
+
+export function assertQuizBatch(quizzes: QuizInput[]) {
+  if (quizzes.length === 0) {
+    throw new ConvexError("Add at least one quiz.");
+  }
+  if (quizzes.length > MAX_QUIZZES_PER_BATCH) {
+    throw new ConvexError(
+      `You can create up to ${MAX_QUIZZES_PER_BATCH} quizzes at a time.`,
+    );
+  }
 }
 
 export const createQuizzes = mutation({
@@ -448,15 +465,7 @@ export const createQuizzes = mutation({
   returns: v.object({ created: v.number() }),
   handler: async (ctx, { quizzes }) => {
     const user = await requireUser(ctx);
-
-    if (quizzes.length === 0) {
-      throw new ConvexError("Add at least one quiz.");
-    }
-    if (quizzes.length > MAX_QUIZZES_PER_BATCH) {
-      throw new ConvexError(
-        `You can create up to ${MAX_QUIZZES_PER_BATCH} quizzes at a time.`,
-      );
-    }
+    assertQuizBatch(quizzes);
 
     for (const quiz of quizzes) {
       const clean = cleanQuiz(quiz);
@@ -464,10 +473,6 @@ export const createQuizzes = mutation({
       await ctx.db.insert("quizzes", {
         ...clean,
         slug: await freeSlug(ctx, clean.prompt),
-        language: quiz.language,
-        topic: quiz.topic,
-        difficulty: quiz.difficulty,
-        correctOptionId: quiz.correctOptionId,
         authorId: user._id,
         ...(user.name ? { authorName: user.name } : {}),
       });

@@ -10,11 +10,6 @@ export const DIFFICULTY_LABEL = {
   advanced: "Advanced",
 } as const;
 
-export const LANGUAGE_LABEL = {
-  typescript: "TypeScript",
-  python: "Python",
-} as const;
-
 export function votePercent(count: number, totalVotes: number) {
   if (totalVotes === 0) {
     return 0;
