@@ -1,4 +1,5 @@
 import { v } from "convex/values";
+import { internal } from "./_generated/api";
 import { internalMutation, query } from "./_generated/server";
 import type { MutationCtx } from "./_generated/server";
 
@@ -23,7 +24,8 @@ function withSuffix(base: string, suffix: string) {
 
 // Usernames are the public profile handle, so they must stay unique and
 // readable. The email local part is the readable base; the auth id breaks
-// ties when two accounts share a local part.
+// ties when two accounts share a local part. Throws instead of reusing an
+// occupied candidate, so one profile URL never resolves to two accounts.
 export async function uniqueUsername(
   ctx: MutationCtx,
   email: string,
@@ -47,7 +49,9 @@ export async function uniqueUsername(
     }
   }
 
-  return candidates[candidates.length - 1];
+  throw new Error(
+    `Unable to generate a unique username: ${candidates.join(", ")} are all taken`,
+  );
 }
 
 const profileValidator = v.object({
@@ -77,15 +81,19 @@ export const profileByUsername = query({
 });
 
 // Accounts created before usernames existed keep their documents until this
-// runs once per deployment.
+// runs. Each call migrates one page and schedules the next, so deployments
+// with more users than BACKFILL_BATCH_SIZE are still fully covered.
 export const backfillUsernames = internalMutation({
-  args: {},
-  returns: v.object({ updated: v.number() }),
-  handler: async (ctx) => {
-    const users = await ctx.db.query("users").take(BACKFILL_BATCH_SIZE);
+  args: { cursor: v.optional(v.string()) },
+  returns: v.object({ updated: v.number(), isDone: v.boolean() }),
+  handler: async (ctx, { cursor }) => {
+    const page = await ctx.db.query("users").paginate({
+      cursor: cursor ?? null,
+      numItems: BACKFILL_BATCH_SIZE,
+    });
     let updated = 0;
 
-    for (const user of users) {
+    for (const user of page.page) {
       if (user.username) {
         continue;
       }
@@ -96,6 +104,12 @@ export const backfillUsernames = internalMutation({
       updated += 1;
     }
 
-    return { updated };
+    if (!page.isDone) {
+      await ctx.scheduler.runAfter(0, internal.users.backfillUsernames, {
+        cursor: page.continueCursor,
+      });
+    }
+
+    return { updated, isDone: page.isDone };
   },
 });
