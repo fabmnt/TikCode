@@ -1,12 +1,6 @@
 import { ChevronDownIcon } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
 import { QuizOption } from "@/components/quiz/QuizOption";
 import { RichText } from "@/components/quiz/RichText";
-import {
-  DIFFICULTY_LABEL,
-  LANGUAGE_LABEL,
-  TOPIC_LABEL,
-} from "@/lib/quiz-labels";
 import { cn } from "@/lib/utils";
 import type { QuizView } from "@/lib/feed";
 
@@ -22,22 +16,11 @@ export function QuizCard({ quiz, pendingOptionId, onAnswer }: QuizCardProps) {
   return (
     <article className="flex h-full flex-col gap-3 px-4 pt-5 pb-6">
       <header className="flex flex-col gap-2">
-        <div className="flex h-5 flex-nowrap items-center gap-2 overflow-hidden">
-          <Badge variant="outline">{LANGUAGE_LABEL[quiz.language]}</Badge>
-          {quiz.answered && (
-            <>
-              <Badge variant="outline">{TOPIC_LABEL[quiz.topic]}</Badge>
-              <Badge variant="outline">
-                {DIFFICULTY_LABEL[quiz.difficulty]}
-              </Badge>
-            </>
-          )}
-          {quiz.authorName && (
-            <span className="text-muted-foreground ml-auto truncate text-xs">
-              by {quiz.authorName}
-            </span>
-          )}
-        </div>
+        {quiz.authorName && (
+          <span className="text-muted-foreground truncate text-xs">
+            by {quiz.authorName}
+          </span>
+        )}
         <h2 className="text-lg font-medium tracking-tight">{quiz.prompt}</h2>
       </header>
 

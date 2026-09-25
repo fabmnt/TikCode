@@ -1,13 +1,11 @@
 import { useState } from "react";
 import { useMutation, usePaginatedQuery, useQuery } from "convex/react";
-import { CircleHelpIcon, PlusIcon } from "lucide-react";
+import { CircleHelpIcon } from "lucide-react";
 import { api } from "../../../convex/_generated/api";
 import { withConvexProvider } from "@/lib/convex";
 import { getOrCreateClientId } from "@/lib/client-id";
 import { FEED_PAGE_SIZE, isNearby, withStats } from "@/lib/feed";
-import { cn } from "@/lib/utils";
-import { buttonVariants } from "@/components/ui/button";
-import { FeedAccountButton } from "@/components/auth/FeedAccountButton";
+import { BottomNav } from "@/components/nav/BottomNav";
 import { QuizCard } from "@/components/quiz/QuizCard";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -17,21 +15,6 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "@/components/ui/empty";
-
-function FeedHeader() {
-  return (
-    <header className="flex h-12 shrink-0 items-center justify-between px-3">
-      <a
-        href="/create"
-        className={cn(buttonVariants({ variant: "ghost", size: "sm" }))}
-      >
-        <PlusIcon />
-        Create
-      </a>
-      <FeedAccountButton />
-    </header>
-  );
-}
 
 function QuizFeedView() {
   const [clientId] = useState(getOrCreateClientId);
@@ -64,8 +47,7 @@ function QuizFeedView() {
 
   if (isLoading && results.length === 0) {
     return (
-      <div className="flex h-dvh flex-col">
-        <FeedHeader />
+      <div className="flex h-full flex-col">
         <div className="flex min-h-0 flex-1 flex-col gap-4 px-4 py-5">
           <Skeleton className="h-5 w-24" />
           <Skeleton className="h-7 w-5/6" />
@@ -75,14 +57,14 @@ function QuizFeedView() {
           <Skeleton className="h-12 w-full" />
           <Skeleton className="h-12 w-full" />
         </div>
+        <BottomNav active="feed" />
       </div>
     );
   }
 
   if (results.length === 0) {
     return (
-      <div className="flex h-dvh flex-col">
-        <FeedHeader />
+      <div className="flex h-full flex-col">
         <div className="flex min-h-0 flex-1 items-center justify-center px-4">
           <Empty>
             <EmptyHeader>
@@ -96,13 +78,13 @@ function QuizFeedView() {
             </EmptyHeader>
           </Empty>
         </div>
+        <BottomNav active="feed" />
       </div>
     );
   }
 
   return (
-    <div className="flex h-dvh flex-col">
-      <FeedHeader />
+    <div className="flex h-full flex-col">
       <div
         className="min-h-0 flex-1 snap-y snap-mandatory [scrollbar-width:none] overflow-y-auto overscroll-y-contain scroll-smooth [&::-webkit-scrollbar]:hidden"
         onScroll={(event) => {
@@ -122,10 +104,7 @@ function QuizFeedView() {
           if (index === activeIndex + 1) stats = nextStats;
 
           return (
-            <div
-              key={quiz._id}
-              className="h-[calc(100dvh-3rem)] snap-start snap-always"
-            >
+            <div key={quiz._id} className="h-full snap-start snap-always">
               {isNearby(index, activeIndex) ? (
                 <QuizCard
                   quiz={withStats(quiz, stats)}
@@ -158,6 +137,7 @@ function QuizFeedView() {
           );
         })}
       </div>
+      <BottomNav active="feed" />
     </div>
   );
 }

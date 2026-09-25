@@ -11,6 +11,7 @@ const currentUserValidator = v.union(
     email: v.string(),
     name: v.string(),
     role: v.union(role, v.null()),
+    username: v.union(v.string(), v.null()),
   }),
 );
 
@@ -62,6 +63,7 @@ export const currentUser = query({
       email: user?.email ?? authUser.email,
       name: user?.name ?? authUser.name,
       role: user?.role ?? null,
+      username: user?.username ?? null,
     };
   },
 });

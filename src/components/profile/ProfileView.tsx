@@ -4,6 +4,8 @@ import { ArrowLeftIcon, UserRoundIcon } from "lucide-react";
 import { api } from "../../../convex/_generated/api";
 import { withConvexProvider } from "@/lib/convex";
 import { cn } from "@/lib/utils";
+import { SignOutButton } from "@/components/auth/GoogleAuthButton";
+import { BottomNav } from "@/components/nav/BottomNav";
 import { buttonVariants } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -80,7 +82,13 @@ function ProfileStats() {
   );
 }
 
-function ProfileContent({ profile }: { profile: Profile }) {
+function ProfileContent({
+  profile,
+  isOwnProfile,
+}: {
+  profile: Profile;
+  isOwnProfile: boolean;
+}) {
   return (
     <div className="min-h-0 flex-1 overflow-y-auto">
       <div className="flex flex-col items-center gap-3 px-4 pt-6 pb-5">
@@ -94,6 +102,7 @@ function ProfileContent({ profile }: { profile: Profile }) {
           </span>
         </div>
         <ProfileStats />
+        {isOwnProfile && <SignOutButton className="mt-1 h-9 w-full" />}
       </div>
       <Separator />
       <div className="flex justify-center px-4 py-16">
@@ -151,17 +160,21 @@ function ProfileLoading() {
 
 function ProfileView({ username }: { username: string }) {
   const profile = useQuery(api.users.profileByUsername, { username });
+  const viewer = useQuery(api.authz.currentUser);
+  const isOwnProfile =
+    Boolean(viewer?.username) && viewer?.username === profile?.username;
 
   return (
-    <div className="flex h-dvh flex-col">
+    <div className="flex h-full flex-col">
       <ProfileHeader username={profile?.username ?? username} />
       {profile === undefined ? (
         <ProfileLoading />
       ) : profile === null ? (
         <ProfileNotFound username={username} />
       ) : (
-        <ProfileContent profile={profile} />
+        <ProfileContent profile={profile} isOwnProfile={isOwnProfile} />
       )}
+      <BottomNav active="profile" />
     </div>
   );
 }

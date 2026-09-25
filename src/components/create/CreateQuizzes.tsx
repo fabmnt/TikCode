@@ -9,8 +9,10 @@ import { PlusIcon } from "lucide-react";
 import { api } from "../../../convex/_generated/api";
 import { withConvexProvider } from "@/lib/convex";
 import { GoogleSignInButton } from "@/components/auth/GoogleAuthButton";
+import { BottomNav } from "@/components/nav/BottomNav";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
+import { CreateQuizzesPlaceholder } from "@/components/create/CreateQuizzesPlaceholder";
 import { QuizDraftFields } from "@/components/create/QuizDraftFields";
 import {
   MAX_QUIZZES_PER_BATCH,
@@ -20,21 +22,9 @@ import {
   type QuizDraft,
 } from "@/lib/quiz-draft";
 
-function PageHeader() {
-  return (
-    <header className="flex flex-col gap-1">
-      <h1 className="text-lg font-medium">Create quizzes</h1>
-      <p className="text-muted-foreground text-sm">
-        Quizzes go live in the feed as soon as you publish them.
-      </p>
-    </header>
-  );
-}
-
 function SignInPrompt() {
   return (
     <div className="flex min-h-full flex-col gap-6 px-4 py-6">
-      <PageHeader />
       <p className="text-muted-foreground text-sm">
         Sign in with Google to write your own quizzes.
       </p>
@@ -116,8 +106,6 @@ function CreateQuizForm() {
 
   return (
     <div className="flex min-h-full flex-col gap-6 px-4 py-6">
-      <PageHeader />
-
       {published !== null && (
         <p className="border-border bg-card rounded-lg border px-3 py-2 text-sm">
           {published === 1
@@ -167,27 +155,22 @@ function CreateQuizForm() {
   );
 }
 
-function Loading() {
-  return (
-    <div className="flex min-h-full justify-center px-4 py-16">
-      <Spinner />
-    </div>
-  );
-}
-
 function CreateQuizzesView() {
   return (
-    <>
-      <AuthLoading>
-        <Loading />
-      </AuthLoading>
-      <Unauthenticated>
-        <SignInPrompt />
-      </Unauthenticated>
-      <Authenticated>
-        <CreateQuizForm />
-      </Authenticated>
-    </>
+    <div className="flex min-h-0 flex-1 flex-col">
+      <div className="min-h-0 flex-1 overflow-y-auto">
+        <AuthLoading>
+          <CreateQuizzesPlaceholder />
+        </AuthLoading>
+        <Unauthenticated>
+          <SignInPrompt />
+        </Unauthenticated>
+        <Authenticated>
+          <CreateQuizForm />
+        </Authenticated>
+      </div>
+      <BottomNav active="create" />
+    </div>
   );
 }
 

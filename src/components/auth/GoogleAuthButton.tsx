@@ -55,7 +55,7 @@ export function GoogleSignInButton({
   );
 }
 
-export function SignOutButton() {
+export function SignOutButton({ className }: { className?: string }) {
   const [pending, setPending] = useState(false);
 
   return (
@@ -63,6 +63,7 @@ export function SignOutButton() {
       type="button"
       variant="outline"
       size="sm"
+      className={className}
       disabled={pending}
       onClick={() => {
         setPending(true);
