@@ -69,13 +69,17 @@ function CreateQuizForm() {
   }
 
   function duplicateDraft(key: string) {
-    setDrafts((current) =>
-      current.flatMap((draft) =>
+    setDrafts((current) => {
+      if (current.length >= MAX_QUIZZES_PER_BATCH) {
+        return current;
+      }
+
+      return current.flatMap((draft) =>
         draft.key === key
           ? [draft, { ...draft, key: crypto.randomUUID() }]
           : [draft],
-      ),
-    );
+      );
+    });
     setPublished(null);
   }
 
@@ -134,6 +138,7 @@ function CreateQuizForm() {
           disabled={pending}
           showProblems={showProblems}
           canRemove={drafts.length > 1}
+          canDuplicate={!reachedLimit}
           onChange={(patch) => updateDraft(draft.key, patch)}
           onRemove={() => removeDraft(draft.key)}
           onDuplicate={() => duplicateDraft(draft.key)}

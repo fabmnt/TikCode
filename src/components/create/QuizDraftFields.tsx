@@ -25,6 +25,7 @@ type QuizDraftFieldsProps = {
   disabled: boolean;
   showProblems: boolean;
   canRemove: boolean;
+  canDuplicate: boolean;
   onChange: (patch: Partial<QuizDraft>) => void;
   onRemove: () => void;
   onDuplicate: () => void;
@@ -39,6 +40,7 @@ export function QuizDraftFields({
   disabled,
   showProblems,
   canRemove,
+  canDuplicate,
   onChange,
   onRemove,
   onDuplicate,
@@ -78,7 +80,7 @@ export function QuizDraftFields({
             type="button"
             variant="ghost"
             size="sm"
-            disabled={disabled}
+            disabled={disabled || !canDuplicate}
             onClick={onDuplicate}
           >
             <CopyIcon />

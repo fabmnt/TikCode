@@ -14,7 +14,7 @@ const MAX_QUIZZES_PER_RUN = 5;
 const OPTION_IDS = ["a", "b", "c", "d"] as const;
 const MIN_CODE_LINES = 5;
 const MAX_CODE_LINES = 15;
-const FENCE_PATTERN = /```([^\n`]*)\n([\s\S]*?)```/g;
+const FENCE_PATTERN = /^ {0,3}```([^\n`]*)\n([\s\S]*?)```/gm;
 
 type Language = Infer<typeof language>;
 type Topic = Infer<typeof topic>;
