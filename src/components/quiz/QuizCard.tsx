@@ -1,7 +1,7 @@
 import { ChevronDownIcon } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { QuizOption } from "@/components/quiz/QuizOption";
-import { CodeBlock } from "@/components/quiz/CodeBlock";
+import { RichText } from "@/components/quiz/RichText";
 import {
   DIFFICULTY_LABEL,
   LANGUAGE_LABEL,
@@ -32,14 +32,23 @@ export function QuizCard({ quiz, pendingOptionId, onAnswer }: QuizCardProps) {
               </Badge>
             </>
           )}
+          {quiz.authorName && (
+            <span className="text-muted-foreground ml-auto truncate text-xs">
+              by {quiz.authorName}
+            </span>
+          )}
         </div>
         <h2 className="text-lg font-medium tracking-tight">{quiz.prompt}</h2>
       </header>
 
-      <div className="relative min-h-0 flex-1">
-        <CodeBlock code={quiz.code} language={quiz.language} />
+      <div className="border-border bg-card flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border-0 md:border">
+        <RichText
+          content={quiz.description}
+          language={quiz.language}
+          className="min-h-0 flex-1 overflow-auto p-3"
+        />
         {quiz.answered && (
-          <p className="border-border bg-card/95 text-muted-foreground absolute inset-x-0 bottom-0 rounded-b-lg px-3 py-2 text-sm md:inset-x-px md:bottom-px md:border-t">
+          <p className="border-border text-muted-foreground border-t px-3 py-2 text-sm">
             {quiz.explanation}
           </p>
         )}

@@ -13,7 +13,7 @@ import {
   EmptyTitle,
 } from "@/components/ui/empty";
 import { Spinner } from "@/components/ui/spinner";
-import { CodeBlock } from "@/components/quiz/CodeBlock";
+import { RichText } from "@/components/quiz/RichText";
 import {
   DIFFICULTY_LABEL,
   LANGUAGE_LABEL,
@@ -50,7 +50,11 @@ function DraftCard({
       <h3 className="text-sm font-medium">{draft.prompt}</h3>
 
       <div className="h-40">
-        <CodeBlock code={draft.code} language={draft.language} />
+        <RichText
+          content={draft.description}
+          language={draft.language}
+          className="border-border bg-card h-full overflow-auto rounded-lg border p-3"
+        />
       </div>
 
       <ul className="flex flex-col gap-1.5">

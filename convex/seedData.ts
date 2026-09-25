@@ -1,7 +1,7 @@
 export type SeedQuiz = {
   slug: string;
   prompt: string;
-  code: string;
+  description: string;
   language: "typescript" | "python";
   topic: "code-smell" | "antipattern" | "bad-practice";
   difficulty: "beginner" | "intermediate" | "advanced";
@@ -17,7 +17,8 @@ export const SEED_QUIZZES: SeedQuiz[] = [
     language: "typescript",
     topic: "bad-practice",
     difficulty: "beginner",
-    code: `function parseUser(data: any) {
+    description: `\`\`\`typescript
+function parseUser(data: any) {
   return {
     id: data.id,
     name: data.name.toUpperCase(),
@@ -25,7 +26,8 @@ export const SEED_QUIZZES: SeedQuiz[] = [
 }
 
 const user = parseUser({ id: 1 });
-console.log(user.name);`,
+console.log(user.name);
+\`\`\``,
     options: [
       { id: "a", label: "toUpperCase() is slow on long names" },
       {
@@ -45,7 +47,8 @@ console.log(user.name);`,
     language: "python",
     topic: "antipattern",
     difficulty: "intermediate",
-    code: `def load_order_counts(users):
+    description: `\`\`\`python
+def load_order_counts(users):
     result = []
     for user in users:
         orders = db.query(
@@ -53,7 +56,8 @@ console.log(user.name);`,
             user.id,
         )
         result.append((user.name, len(orders)))
-    return result`,
+    return result
+\`\`\``,
     options: [
       { id: "a", label: "N+1 queries: one extra database round-trip per user" },
       { id: "b", label: "The tuple in append cannot hold a name and a count" },
@@ -70,13 +74,15 @@ console.log(user.name);`,
     language: "typescript",
     topic: "code-smell",
     difficulty: "beginner",
-    code: `function scheduleRefresh(onRefresh: () => void) {
+    description: `\`\`\`typescript
+function scheduleRefresh(onRefresh: () => void) {
   setTimeout(onRefresh, 86400000);
 }
 
 function isAdult(age: number) {
   return age >= 18;
-}`,
+}
+\`\`\``,
     options: [
       { id: "a", label: "isAdult should live in another file" },
       { id: "b", label: "setTimeout cannot accept an arrow function" },
@@ -93,7 +99,8 @@ function isAdult(age: number) {
     language: "typescript",
     topic: "antipattern",
     difficulty: "advanced",
-    code: `async function processOrder(order: Order) {
+    description: `\`\`\`typescript
+async function processOrder(order: Order) {
   if (!order.email.includes("@")) throw new Error("bad email");
   order.total = order.items.reduce((sum, item) => sum + item.price, 0);
   if (order.total > 100) order.total *= 0.9;
@@ -102,7 +109,8 @@ function isAdult(age: number) {
   await metrics.increment("orders");
   cache.delete("orders");
   await audit.log("order", order.id);
-}`,
+}
+\`\`\``,
     options: [
       { id: "a", label: "Email send must happen before insert" },
       { id: "b", label: "cache.delete is too fast to await" },
@@ -122,12 +130,14 @@ function isAdult(age: number) {
     language: "python",
     topic: "bad-practice",
     difficulty: "beginner",
-    code: `def add_item(item, items=[]):
+    description: `\`\`\`python
+def add_item(item, items=[]):
     items.append(item)
     return items
 
 first = add_item("a")
-second = add_item("b")`,
+second = add_item("b")
+\`\`\``,
     options: [
       { id: "a", label: "append cannot add strings to a list" },
       {
@@ -150,7 +160,8 @@ second = add_item("b")`,
     language: "typescript",
     topic: "code-smell",
     difficulty: "intermediate",
-    code: `function createUser(
+    description: `\`\`\`typescript
+function createUser(
   name: string,
   admin: boolean,
   sendEmail: boolean,
@@ -159,7 +170,8 @@ second = add_item("b")`,
   return saveUser({ name, admin, sendEmail, active });
 }
 
-createUser("Ada", true, false, true);`,
+createUser("Ada", true, false, true);
+\`\`\``,
     options: [
       { id: "a", label: "Boolean parameters hide meaning at the call site" },
       { id: "b", label: "saveUser cannot accept an object literal" },
@@ -176,11 +188,13 @@ createUser("Ada", true, false, true);`,
     language: "python",
     topic: "bad-practice",
     difficulty: "beginner",
-    code: `def parse_settings(raw: str) -> dict:
+    description: `\`\`\`python
+def parse_settings(raw: str) -> dict:
     try:
         return json.loads(raw)
     except:
-        return {}`,
+        return {}
+\`\`\``,
     options: [
       { id: "a", label: "json.loads cannot parse an empty object" },
       { id: "b", label: "Returning dict is slower than returning None" },
@@ -200,7 +214,8 @@ createUser("Ada", true, false, true);`,
     language: "typescript",
     topic: "code-smell",
     difficulty: "advanced",
-    code: `function discount(order: Order) {
+    description: `\`\`\`typescript
+function discount(order: Order) {
   const customer = order.customer;
   if (customer.tier === "gold" && customer.years > 5) {
     return order.total * 0.2;
@@ -209,7 +224,8 @@ createUser("Ada", true, false, true);`,
     return order.total * 0.1;
   }
   return 0;
-}`,
+}
+\`\`\``,
     options: [
       { id: "a", label: "The 0.2 discount is too high for gold customers" },
       { id: "b", label: "order.total should be a string for money" },
@@ -229,14 +245,16 @@ createUser("Ada", true, false, true);`,
     language: "typescript",
     topic: "bad-practice",
     difficulty: "intermediate",
-    code: `async function save(user: User) {
+    description: `\`\`\`typescript
+async function save(user: User) {
   await db.users.insert(user);
 }
 
 function onSubmit(user: User) {
   save(user);
   redirect("/done");
-}`,
+}
+\`\`\``,
     options: [
       { id: "a", label: "redirect cannot run in a non-async function" },
       {
@@ -260,9 +278,11 @@ function onSubmit(user: User) {
     language: "python",
     topic: "bad-practice",
     difficulty: "intermediate",
-    code: `def find_user(user_id: str):
+    description: `\`\`\`python
+def find_user(user_id: str):
     query = f"SELECT * FROM users WHERE id = '{user_id}'"
-    return db.execute(query)`,
+    return db.execute(query)
+\`\`\``,
     options: [
       { id: "a", label: "f-strings cannot include quotes" },
       { id: "b", label: "SELECT * is always slower than SELECT id" },
@@ -279,7 +299,8 @@ function onSubmit(user: User) {
     language: "typescript",
     topic: "code-smell",
     difficulty: "intermediate",
-    code: `function deliver(order: Order | null) {
+    description: `\`\`\`typescript
+function deliver(order: Order | null) {
   if (order) {
     if (order.paid) {
       if (order.address) {
@@ -290,7 +311,8 @@ function onSubmit(user: User) {
     }
   }
   return null;
-}`,
+}
+\`\`\``,
     options: [
       { id: "a", label: "Deep nesting; flatten with guard clauses" },
       { id: "b", label: "ship() must return null on success" },
@@ -307,11 +329,13 @@ function onSubmit(user: User) {
     language: "python",
     topic: "code-smell",
     difficulty: "beginner",
-    code: `def read_json(path: str):
+    description: `\`\`\`python
+def read_json(path: str):
     file = open(path)
     data = json.load(file)
     file.close()
-    return data`,
+    return data
+\`\`\``,
     options: [
       { id: "a", label: "json.load cannot read from a file object" },
       { id: "b", label: "path should be a Path, never a str" },
@@ -328,14 +352,16 @@ function onSubmit(user: User) {
     language: "typescript",
     topic: "bad-practice",
     difficulty: "intermediate",
-    code: `type User = { id: string; email: string };
+    description: `\`\`\`typescript
+type User = { id: string; email: string };
 
 function fromRequest(body: unknown): User {
   return body as User;
 }
 
 const user = fromRequest(JSON.parse(raw));
-sendEmail(user.email);`,
+sendEmail(user.email);
+\`\`\``,
     options: [
       { id: "a", label: "JSON.parse always returns a User" },
       { id: "b", label: "as User checks the shape at runtime" },
@@ -356,11 +382,13 @@ sendEmail(user.email);`,
     language: "python",
     topic: "bad-practice",
     difficulty: "intermediate",
-    code: `def drop_expired(items):
+    description: `\`\`\`python
+def drop_expired(items):
     for item in items:
         if item.expired:
             items.remove(item)
-    return items`,
+    return items
+\`\`\``,
     options: [
       { id: "a", label: "Removing from a list while iterating skips items" },
       { id: "b", label: "expired must be compared with is True" },
