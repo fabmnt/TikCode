@@ -1,0 +1,21 @@
+---
+export const prerender = false;
+
+import Layout from "../layouts/Layout.astro";
+import ProfileView from "../components/profile/ProfileView.tsx";
+import { Skeleton } from "../components/ui/skeleton";
+
+const username = (Astro.params.username ?? "").replace(/^@/, "").toLowerCase();
+---
+
+<Layout title={`@${username} · Quizz Feed`}>
+  <main class="mx-auto h-dvh w-full max-w-md overflow-hidden md:border-x md:border-border">
+    <ProfileView username={username} client:only="react">
+      <div slot="fallback" class="flex h-dvh flex-col items-center gap-4 px-4">
+        <Skeleton className="mt-6 size-24 rounded-full" />
+        <Skeleton className="h-6 w-40" />
+        <Skeleton className="h-4 w-28" />
+      </div>
+    </ProfileView>
+  </main>
+</Layout>

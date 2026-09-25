@@ -6,6 +6,7 @@ import type { DataModel } from "./_generated/dataModel";
 import type { GenericCtx } from "@convex-dev/better-auth";
 import authConfig from "./auth.config";
 import { roleForNewUser } from "./roles";
+import { uniqueUsername } from "./users";
 
 const LOCAL_DEV_ORIGIN = "http://localhost:4321";
 const ORIGIN_SEPARATOR = ",";
@@ -46,9 +47,11 @@ export const authComponent = createClient<DataModel>(components.betterAuth, {
     user: {
       onCreate: async (ctx, doc: AuthUserDoc) => {
         const role = await roleForNewUser(ctx, doc.email);
+        const username = await uniqueUsername(ctx, doc.email, doc._id);
         await ctx.db.insert("users", {
           authId: doc._id,
           role,
+          username,
           ...profilePatch(doc),
         });
       },

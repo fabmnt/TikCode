@@ -40,8 +40,11 @@ export default defineSchema({
     email: v.string(),
     name: v.optional(v.string()),
     image: v.optional(v.string()),
+    username: v.optional(v.string()),
     role,
-  }).index("by_authId", ["authId"]),
+  })
+    .index("by_authId", ["authId"])
+    .index("by_username", ["username"]),
 
   quizzes: defineTable(quizContent).index("by_slug", ["slug"]),
 
